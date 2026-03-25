@@ -6,6 +6,7 @@ import {
   CameraOutlined,
   LinkOutlined,
   ApiOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
@@ -17,6 +18,7 @@ const menuItems = [
   { key: '/', icon: <LoginOutlined />, label: '授权登录' },
   { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
   { key: '/cameras', icon: <CameraOutlined />, label: '摄像头' },
+  { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
 ]
 
 interface Props {
