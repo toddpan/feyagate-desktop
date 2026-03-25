@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import {
   Card,
   Button,
@@ -11,6 +11,7 @@ import {
   Divider,
   Input,
   Modal,
+  Steps,
   message,
 } from 'antd'
 import {
@@ -23,12 +24,16 @@ import {
   SwapOutlined,
   RedoOutlined,
   ExclamationCircleOutlined,
+  CopyOutlined,
+  KeyOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../stores/authStore'
-import { onAuthCode, getServerUrl, setServerUrl } from '../services/mcp-client'
+import * as mcp from '../services/mcp-client'
 import { useState } from 'react'
 
-const { Title, Text, Link } = Typography
+const { Title, Text, Link, Paragraph } = Typography
+
+const isElectron = !!window.feyagate
 
 function formatRemaining(seconds: number): string {
   if (seconds <= 0) return '已过期'
@@ -37,6 +42,17 @@ function formatRemaining(seconds: number): string {
   if (h > 24) return `${Math.floor(h / 24)} 天 ${h % 24} 小时`
   if (h > 0) return `${h} 小时 ${m} 分钟`
   return `${m} 分钟`
+}
+
+function extractCodeFromUrl(input: string): string | null {
+  try {
+    const trimmed = input.trim()
+    if (trimmed.length < 10) return trimmed || null
+    const url = new URL(trimmed)
+    return url.searchParams.get('code')
+  } catch {
+    return input.trim() || null
+  }
 }
 
 export default function Auth() {
@@ -54,24 +70,80 @@ export default function Auth() {
 
   const [serverUrlInput, setServerUrlInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showManualAuth, setShowManualAuth] = useState(false)
+  const [manualUrlInput, setManualUrlInput] = useState('')
+  const [submittingCode, setSubmittingCode] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval>>()
 
   useEffect(() => {
     if (serverOnline) fetchStatus()
   }, [serverOnline, fetchStatus])
 
   useEffect(() => {
-    onAuthCode(async (code) => {
+    mcp.onAuthCode(async (code) => {
       await handleCallback(code)
+      setShowManualAuth(false)
       message.success('授权成功！')
     })
   }, [handleCallback])
 
   useEffect(() => {
-    getServerUrl().then(setServerUrlInput)
+    mcp.getServerUrl().then(setServerUrlInput)
   }, [])
 
+  // In browser mode, poll auth status after opening OAuth
+  const startBrowserPoll = useCallback(() => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const status = await mcp.getAuthStatus()
+        if (status.authorized) {
+          clearInterval(pollRef.current)
+          setShowManualAuth(false)
+          fetchStatus()
+          message.success('授权成功！')
+        }
+      } catch { /* ignore */ }
+    }, 3000)
+
+    setTimeout(() => clearInterval(pollRef.current), 120000)
+  }, [fetchStatus])
+
+  useEffect(() => () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+  }, [])
+
+  const handleStartOAuth = useCallback(async () => {
+    if (isElectron) {
+      await startOAuth()
+    } else {
+      await startOAuth()
+      setShowManualAuth(true)
+      startBrowserPoll()
+    }
+  }, [startOAuth, startBrowserPoll])
+
+  const handleManualCodeSubmit = async () => {
+    const code = extractCodeFromUrl(manualUrlInput)
+    if (!code) {
+      message.error('无法识别授权码，请检查输入')
+      return
+    }
+    setSubmittingCode(true)
+    try {
+      await handleCallback(code)
+      setShowManualAuth(false)
+      setManualUrlInput('')
+      message.success('授权成功！')
+    } catch (e) {
+      message.error(`授权失败: ${e}`)
+    } finally {
+      setSubmittingCode(false)
+    }
+  }
+
   const handleSaveUrl = async () => {
-    await setServerUrl(serverUrlInput)
+    await mcp.setServerUrl(serverUrlInput)
     message.success('服务器地址已更新')
     useAuthStore.getState().checkServer()
   }
@@ -146,7 +218,7 @@ export default function Auth() {
             <Alert message={error} type="error" showIcon closable style={{ marginBottom: 16 }} />
           )}
 
-          {authorized ? (
+          {authorized && !showManualAuth ? (
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               <Result
                 status="success"
@@ -173,7 +245,7 @@ export default function Auth() {
                       content: '将重新打开小米登录页面，使用当前账号重新授权。适用于 Token 过期或需要刷新权限的情况。',
                       okText: '重新授权',
                       cancelText: '取消',
-                      onOk: startOAuth,
+                      onOk: handleStartOAuth,
                     })
                   }}
                 >
@@ -196,7 +268,7 @@ export default function Auth() {
                           cloudServer: '',
                           remainingSeconds: 0,
                         })
-                        await startOAuth()
+                        await handleStartOAuth()
                       },
                     })
                   }}
@@ -205,6 +277,17 @@ export default function Auth() {
                 </Button>
               </Space>
             </Space>
+          ) : showManualAuth ? (
+            <ManualAuthSection
+              onSubmit={handleManualCodeSubmit}
+              urlInput={manualUrlInput}
+              setUrlInput={setManualUrlInput}
+              submitting={submittingCode}
+              onCancel={() => {
+                setShowManualAuth(false)
+                if (pollRef.current) clearInterval(pollRef.current)
+              }}
+            />
           ) : (
             <Space direction="vertical" size="middle" style={{ width: '100%', textAlign: 'center' }}>
               <Text type="secondary">连接您的小米账号以管理智能设备和摄像头</Text>
@@ -212,7 +295,7 @@ export default function Auth() {
                 type="primary"
                 size="large"
                 icon={<LoginOutlined />}
-                onClick={startOAuth}
+                onClick={handleStartOAuth}
                 loading={loading}
               >
                 使用米家账号登录
@@ -236,6 +319,93 @@ export default function Auth() {
           )}
         </Card>
       </Spin>
+    </Space>
+  )
+}
+
+function ManualAuthSection({
+  onSubmit,
+  urlInput,
+  setUrlInput,
+  submitting,
+  onCancel,
+}: {
+  onSubmit: () => void
+  urlInput: string
+  setUrlInput: (v: string) => void
+  submitting: boolean
+  onCancel: () => void
+}) {
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="浏览器模式 — 需要手动完成授权"
+        description="小米登录页面已在新标签页打开。登录后页面会跳转到一个无法访问的地址，这是正常的。请按下面的步骤完成授权。"
+      />
+
+      <Steps
+        direction="vertical"
+        size="small"
+        current={1}
+        items={[
+          {
+            title: '小米登录',
+            description: '在新打开的标签页中完成小米账号登录',
+            status: 'finish',
+          },
+          {
+            title: '复制重定向地址',
+            description: (
+              <Space direction="vertical" size={4}>
+                <Text>登录成功后，页面会跳转并显示"无法访问此网站"。</Text>
+                <Text strong>请复制浏览器地址栏中的完整 URL</Text>
+                <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                  地址格式类似: <Text code>https://127.0.0.1/?code=xxxxxxxx</Text>
+                </Paragraph>
+              </Space>
+            ),
+            status: 'process',
+          },
+          {
+            title: '粘贴完成授权',
+            description: '将复制的地址粘贴到下方输入框',
+            status: 'wait',
+          },
+        ]}
+      />
+
+      <Card size="small" style={{ background: '#fafafa' }}>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Text strong><KeyOutlined /> 粘贴重定向 URL 或授权码：</Text>
+          <Input.TextArea
+            placeholder="粘贴完整的 https://127.0.0.1/?code=xxx 地址，或直接输入授权码"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            autoSize={{ minRows: 2, maxRows: 4 }}
+            allowClear
+          />
+          <Space>
+            <Button
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              onClick={onSubmit}
+              loading={submitting}
+              disabled={!urlInput.trim()}
+            >
+              提交授权码
+            </Button>
+            <Button onClick={onCancel}>取消</Button>
+          </Space>
+        </Space>
+      </Card>
+
+      <Alert
+        type="warning"
+        showIcon
+        message="系统也在自动检测授权状态，如果服务端已收到授权码，页面会自动跳转。"
+      />
     </Space>
   )
 }
