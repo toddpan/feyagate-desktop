@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow: BrowserWindow | null = null
 let oauthWindow: BrowserWindow | null = null
-let serverUrl = 'http://localhost:8080'
+let serverUrl = 'http://localhost:38080'
 let serverProcess: ChildProcess | null = null
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL

@@ -175,13 +175,13 @@ export default function Auth() {
         subTitle="请确保 miloco-mcp-server 正在运行"
         extra={
           <Space direction="vertical" align="center" size="large">
-            <Text type="secondary">默认地址: http://localhost:8080</Text>
+            <Text type="secondary">默认地址: http://localhost:38080</Text>
             <Space>
               <Input
                 style={{ width: 300 }}
                 value={serverUrlInput}
                 onChange={(e) => setServerUrlInput(e.target.value)}
-                placeholder="http://localhost:8080"
+                placeholder="http://localhost:38080"
               />
               <Button onClick={handleSaveUrl}>保存</Button>
             </Space>

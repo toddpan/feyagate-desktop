@@ -12,11 +12,11 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/mcp': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:38080',
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:38080',
         changeOrigin: true,
       },
       '/ota': {

@@ -27,7 +27,7 @@ import { useAuthStore } from '../stores/authStore'
 
 const { Title, Text, Paragraph } = Typography
 
-const SERVER_URL = 'http://localhost:8080'
+const SERVER_URL = 'http://localhost:38080'
 
 function CodeBlock({ code, language = 'json' }: { code: string; language?: string }) {
   const copy = () => {

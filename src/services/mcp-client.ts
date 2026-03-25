@@ -1,4 +1,4 @@
-let _serverUrl = window.feyagate ? 'http://localhost:8080' : ''
+let _serverUrl = window.feyagate ? 'http://localhost:38080' : ''
 let _authCodeCallbacks: Array<(code: string) => void> = []
 
 async function browserMcpCall(method: string, params?: Record<string, unknown>) {
