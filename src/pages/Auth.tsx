@@ -10,6 +10,7 @@ import {
   Result,
   Divider,
   Input,
+  Modal,
   message,
 } from 'antd'
 import {
@@ -19,6 +20,9 @@ import {
   ClockCircleOutlined,
   SettingOutlined,
   ApiOutlined,
+  SwapOutlined,
+  RedoOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../stores/authStore'
 import { onAuthCode, getServerUrl, setServerUrl } from '../services/mcp-client'
@@ -158,7 +162,48 @@ export default function Auth() {
                   {formatRemaining(remainingSeconds)}
                 </Descriptions.Item>
               </Descriptions>
-              <Button onClick={fetchStatus}>刷新状态</Button>
+              <Space wrap>
+                <Button onClick={fetchStatus}>刷新状态</Button>
+                <Button
+                  icon={<RedoOutlined />}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '重新授权',
+                      icon: <ExclamationCircleOutlined />,
+                      content: '将重新打开小米登录页面，使用当前账号重新授权。适用于 Token 过期或需要刷新权限的情况。',
+                      okText: '重新授权',
+                      cancelText: '取消',
+                      onOk: startOAuth,
+                    })
+                  }}
+                >
+                  重新授权
+                </Button>
+                <Button
+                  icon={<SwapOutlined />}
+                  danger
+                  onClick={() => {
+                    Modal.confirm({
+                      title: '切换账号',
+                      icon: <ExclamationCircleOutlined />,
+                      content: '将清除当前授权信息并打开小米登录页面。您可以使用另一个小米账号登录。切换后当前设备列表将被刷新。',
+                      okText: '确认切换',
+                      okButtonProps: { danger: true },
+                      cancelText: '取消',
+                      onOk: async () => {
+                        useAuthStore.setState({
+                          authorized: false,
+                          cloudServer: '',
+                          remainingSeconds: 0,
+                        })
+                        await startOAuth()
+                      },
+                    })
+                  }}
+                >
+                  切换账号
+                </Button>
+              </Space>
             </Space>
           ) : (
             <Space direction="vertical" size="middle" style={{ width: '100%', textAlign: 'center' }}>
