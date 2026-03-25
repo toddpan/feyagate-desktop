@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
+import UpdateNotification from './components/UpdateNotification'
 import Auth from './pages/Auth'
 import Devices from './pages/Devices'
 import Cameras from './pages/Cameras'
@@ -7,6 +8,7 @@ import Cameras from './pages/Cameras'
 export default function App() {
   return (
     <AppLayout>
+      <UpdateNotification />
       <Routes>
         <Route path="/" element={<Auth />} />
         <Route path="/devices" element={<Devices />} />

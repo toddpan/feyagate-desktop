@@ -5,6 +5,7 @@ import {
   Descriptions,
   Alert,
   Space,
+  Tag,
   Typography,
   Spin,
   Result,
@@ -24,11 +25,14 @@ import {
   SwapOutlined,
   RedoOutlined,
   ExclamationCircleOutlined,
-  CopyOutlined,
   KeyOutlined,
+  CloudSyncOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../stores/authStore'
 import * as mcp from '../services/mcp-client'
+import { getCurrentVersion } from '../services/updater'
+import { useUpdateStore } from '../stores/updateStore'
 import { useState } from 'react'
 
 const { Title, Text, Link, Paragraph } = Typography
@@ -304,18 +308,11 @@ export default function Auth() {
           )}
 
           {showSettings && (
-            <>
-              <Divider />
-              <Space>
-                <Text>服务器地址:</Text>
-                <Input
-                  style={{ width: 300 }}
-                  value={serverUrlInput}
-                  onChange={(e) => setServerUrlInput(e.target.value)}
-                />
-                <Button onClick={handleSaveUrl}>保存</Button>
-              </Space>
-            </>
+            <SettingsSection
+              serverUrlInput={serverUrlInput}
+              setServerUrlInput={setServerUrlInput}
+              onSave={handleSaveUrl}
+            />
           )}
         </Card>
       </Spin>
@@ -407,5 +404,58 @@ function ManualAuthSection({
         message="系统也在自动检测授权状态，如果服务端已收到授权码，页面会自动跳转。"
       />
     </Space>
+  )
+}
+
+function SettingsSection({
+  serverUrlInput,
+  setServerUrlInput,
+  onSave,
+}: {
+  serverUrlInput: string
+  setServerUrlInput: (v: string) => void
+  onSave: () => void
+}) {
+  const { hasUpdate, updateInfo, checking, check } = useUpdateStore()
+  const version = getCurrentVersion()
+
+  return (
+    <>
+      <Divider />
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Space>
+          <Text>服务器地址:</Text>
+          <Input
+            style={{ width: 300 }}
+            value={serverUrlInput}
+            onChange={(e) => setServerUrlInput(e.target.value)}
+          />
+          <Button onClick={onSave}>保存</Button>
+        </Space>
+
+        <Divider style={{ margin: '4px 0' }} />
+
+        <Space wrap align="center">
+          <Text><InfoCircleOutlined /> 版本: <Text strong>v{version}</Text></Text>
+          <Button
+            size="small"
+            icon={<CloudSyncOutlined />}
+            loading={checking}
+            onClick={() => {
+              useUpdateStore.setState({ dismissed: false })
+              check()
+            }}
+          >
+            检查更新
+          </Button>
+          {hasUpdate && updateInfo && (
+            <Tag color="blue">新版本 v{updateInfo.version} 可用</Tag>
+          )}
+          {!hasUpdate && !checking && (
+            <Text type="secondary">已是最新版本</Text>
+          )}
+        </Space>
+      </Space>
+    </>
   )
 }
