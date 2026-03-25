@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-electron/
+release/
+resources/server/miloco-mcp-server
+*.log
+.DS_Store

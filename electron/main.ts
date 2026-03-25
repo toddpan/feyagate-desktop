@@ -1,14 +1,103 @@
 import { app, BrowserWindow, ipcMain, shell, session } from 'electron'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { spawn, ChildProcess } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow: BrowserWindow | null = null
 let oauthWindow: BrowserWindow | null = null
 let serverUrl = 'http://localhost:8080'
+let serverProcess: ChildProcess | null = null
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
+
+function getServerPaths() {
+  const isDev = !!VITE_DEV_SERVER_URL
+  const resourceBase = isDev
+    ? path.resolve(__dirname, '../resources/server')
+    : path.join(process.resourcesPath!, 'server')
+
+  const binary = path.join(resourceBase, 'miloco-mcp-server')
+  const defaultConfig = path.join(resourceBase, 'config.yaml')
+
+  const userDataDir = path.join(app.getPath('userData'), 'server-data')
+  const userConfig = path.join(userDataDir, 'config.yaml')
+  const tokenFile = path.join(userDataDir, 'auth_token.json')
+
+  return { binary, defaultConfig, userDataDir, userConfig, tokenFile }
+}
+
+function ensureUserConfig() {
+  const { defaultConfig, userDataDir, userConfig } = getServerPaths()
+
+  if (!fs.existsSync(userDataDir)) {
+    fs.mkdirSync(userDataDir, { recursive: true })
+  }
+
+  if (!fs.existsSync(userConfig)) {
+    fs.copyFileSync(defaultConfig, userConfig)
+  }
+
+  let cfg = fs.readFileSync(userConfig, 'utf-8')
+  const { tokenFile } = getServerPaths()
+  cfg = cfg.replace(
+    /token_file:\s*"[^"]*"/,
+    `token_file: "${tokenFile.replace(/\\/g, '/')}"`
+  )
+  fs.writeFileSync(userConfig, cfg, 'utf-8')
+
+  return userConfig
+}
+
+function startServer() {
+  const { binary } = getServerPaths()
+
+  if (!fs.existsSync(binary)) {
+    console.error('[MCP Server] Binary not found:', binary)
+    return
+  }
+
+  const configPath = ensureUserConfig()
+
+  console.log('[MCP Server] Starting:', binary)
+  console.log('[MCP Server] Config:', configPath)
+
+  serverProcess = spawn(binary, ['--config', configPath], {
+    cwd: path.dirname(configPath),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+
+  serverProcess.stdout?.on('data', (data: Buffer) => {
+    console.log('[MCP Server]', data.toString().trimEnd())
+  })
+
+  serverProcess.stderr?.on('data', (data: Buffer) => {
+    console.error('[MCP Server]', data.toString().trimEnd())
+  })
+
+  serverProcess.on('exit', (code, signal) => {
+    console.log(`[MCP Server] Exited: code=${code} signal=${signal}`)
+    serverProcess = null
+  })
+
+  serverProcess.on('error', (err) => {
+    console.error('[MCP Server] Spawn error:', err.message)
+    serverProcess = null
+  })
+}
+
+function stopServer() {
+  if (!serverProcess) return
+  console.log('[MCP Server] Stopping...')
+  serverProcess.kill('SIGTERM')
+  setTimeout(() => {
+    if (serverProcess && !serverProcess.killed) {
+      serverProcess.kill('SIGKILL')
+    }
+  }, 3000)
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -140,7 +229,19 @@ ipcMain.handle('fetch-url', async (_event, url: string) => {
   return resp.json()
 })
 
+ipcMain.handle('server-status', async () => {
+  return { running: serverProcess !== null && !serverProcess.killed }
+})
+
+ipcMain.handle('restart-server', async () => {
+  stopServer()
+  await new Promise((r) => setTimeout(r, 1000))
+  startServer()
+  return true
+})
+
 app.whenReady().then(() => {
+  startServer()
   createWindow()
 
   app.on('activate', () => {
@@ -154,4 +255,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  stopServer()
 })
