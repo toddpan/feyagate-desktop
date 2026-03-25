@@ -16,5 +16,6 @@ interface Window {
     setServerUrl: (url: string) => Promise<void>
     healthCheck: () => Promise<boolean>
     openExternal?: (url: string) => Promise<void>
+    fetchUrl?: (url: string) => Promise<unknown>
   }
 }

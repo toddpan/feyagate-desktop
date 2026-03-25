@@ -49,6 +49,11 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/ota': {
+        target: 'https://your-ota-server.example.com',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 })

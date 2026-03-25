@@ -1,4 +1,5 @@
 const FOTA_JSON_URL = 'https://your-ota-server.example.com/ota/fota.json'
+const FOTA_PROXY_PATH = '/ota/fota.json'
 const APP_FOTA_TYPE = 'feyagate-desktop'
 
 const CURRENT_VERSION = '1.0.0'
@@ -38,9 +39,18 @@ function getPlatformSuffix(): string {
   return 'linux'
 }
 
+async function fetchFotaJson(): Promise<unknown> {
+  // Electron mode: use main-process IPC to bypass CORS
+  if (window.feyagate?.fetchUrl) {
+    return window.feyagate.fetchUrl(FOTA_JSON_URL)
+  }
+  // Browser dev mode: use Vite proxy (/ota -> https://your-ota-server.example.com/ota)
+  const resp = await fetch(FOTA_PROXY_PATH, { signal: AbortSignal.timeout(10000) })
+  return resp.json()
+}
+
 export async function checkForUpdate(): Promise<UpdateCheckResult> {
-  const resp = await fetch(FOTA_JSON_URL, { signal: AbortSignal.timeout(10000) })
-  const data = await resp.json()
+  const data = await fetchFotaJson()
 
   if (!Array.isArray(data)) {
     throw new Error('Invalid fota.json format')
@@ -49,7 +59,6 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
   const platform = getPlatformSuffix()
   const platformType = `${APP_FOTA_TYPE}-${platform}`
 
-  // Match platform-specific entry first, then generic
   let entry = data.find((e: UpdateInfo) => e.type === platformType)
   if (!entry) {
     entry = data.find((e: UpdateInfo) => e.type === APP_FOTA_TYPE)

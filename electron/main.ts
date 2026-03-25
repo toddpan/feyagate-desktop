@@ -135,6 +135,11 @@ ipcMain.handle('open-external', async (_event, url: string) => {
   shell.openExternal(url)
 })
 
+ipcMain.handle('fetch-url', async (_event, url: string) => {
+  const resp = await fetch(url, { signal: AbortSignal.timeout(10000) })
+  return resp.json()
+})
+
 app.whenReady().then(() => {
   createWindow()
 

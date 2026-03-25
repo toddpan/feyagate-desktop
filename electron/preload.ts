@@ -25,4 +25,7 @@ contextBridge.exposeInMainWorld('feyagate', {
 
   openExternal: (url: string) =>
     ipcRenderer.invoke('open-external', url),
+
+  fetchUrl: (url: string) =>
+    ipcRenderer.invoke('fetch-url', url),
 })
