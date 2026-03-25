@@ -1,0 +1,39 @@
+appId: com.feyagate.desktop
+productName: FeyaGate Desktop
+copyright: Copyright © 2025 FeyaGate
+directories:
+  output: release
+  buildResources: resources
+files:
+  - dist/**/*
+  - dist-electron/**/*
+mac:
+  category: public.app-category.utilities
+  target:
+    - dmg
+    - zip
+  artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+dmg:
+  contents:
+    - x: 410
+      y: 150
+      type: link
+      path: /Applications
+    - x: 130
+      y: 150
+      type: file
+win:
+  target:
+    - nsis
+    - zip
+  artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
