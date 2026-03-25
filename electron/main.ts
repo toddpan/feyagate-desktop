@@ -19,7 +19,8 @@ function getServerPaths() {
     ? path.resolve(__dirname, '../resources/server')
     : path.join(process.resourcesPath!, 'server')
 
-  const binary = path.join(resourceBase, 'miloco-mcp-server')
+  const ext = process.platform === 'win32' ? '.exe' : ''
+  const binary = path.join(resourceBase, `miloco-mcp-server${ext}`)
   const defaultConfig = path.join(resourceBase, 'config.yaml')
 
   const userDataDir = path.join(app.getPath('userData'), 'server-data')
