@@ -1,0 +1,11 @@
+[
+  {
+    "type": "feyagate-desktop-mac",
+    "version": "1.0.0",
+    "url": "https://your-ota-server.example.com/ota/feyagate-desktop/FeyaGate-Desktop-v1.0.0-mac-x64.dmg",
+    "md5": "e77f65bde7dcd1bfe09bc7a68f37860a",
+    "release_notes": "FeyaGate v1.0.0 - 默认端口改为 38080，支持 WebUI + Electron 双模式",
+    "force_update": false,
+    "size": 120349672
+  }
+]
