@@ -9,6 +9,8 @@
     "dev": "vite",
     "build": "tsc && vite build && tsc -p tsconfig.electron.json",
     "preview": "vite preview",
+    "build:web": "tsc && vite build --config vite.config.web.ts",
+    "dev:web": "vite --config vite.config.web.ts",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",

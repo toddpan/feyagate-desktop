@@ -44,8 +44,13 @@ async function fetchFotaJson(): Promise<unknown> {
   if (window.feyagate?.fetchUrl) {
     return window.feyagate.fetchUrl(FOTA_JSON_URL)
   }
-  // Browser dev mode: use Vite proxy (/ota -> https://your-ota-server.example.com/ota)
-  const resp = await fetch(FOTA_PROXY_PATH, { signal: AbortSignal.timeout(10000) })
+  // Embedded browser mode (served by C++ server): try server-side proxy first
+  try {
+    const resp = await fetch(FOTA_PROXY_PATH, { signal: AbortSignal.timeout(10000) })
+    if (resp.ok) return resp.json()
+  } catch { /* proxy not available, try direct */ }
+  // Direct fetch (works when CORS is allowed or via Vite dev proxy)
+  const resp = await fetch(FOTA_JSON_URL, { signal: AbortSignal.timeout(10000) })
   return resp.json()
 }
 

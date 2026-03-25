@@ -38,6 +38,7 @@ import { useState } from 'react'
 const { Title, Text, Link, Paragraph } = Typography
 
 const isElectron = !!window.feyagate
+const isEmbeddedWeb = !isElectron && !window.location.protocol.startsWith('file')
 
 function formatRemaining(seconds: number): string {
   if (seconds <= 0) return '已过期'
@@ -153,6 +154,20 @@ export default function Auth() {
   }
 
   if (!serverOnline) {
+    if (isEmbeddedWeb) {
+      return (
+        <Result
+          icon={<Spin size="large" />}
+          title="正在连接 MCP 服务器..."
+          subTitle="页面由 miloco-mcp-server 提供，正在等待 API 就绪"
+          extra={
+            <Button type="primary" onClick={() => useAuthStore.getState().checkServer()}>
+              重新检测
+            </Button>
+          }
+        />
+      )
+    }
     return (
       <Result
         status="warning"
@@ -186,7 +201,7 @@ export default function Auth() {
           <Space align="center">
             <ApiOutlined style={{ fontSize: 32, color: '#1677ff' }} />
             <div>
-              <Title level={4} style={{ margin: 0 }}>FeyaGate Desktop</Title>
+              <Title level={4} style={{ margin: 0 }}>{isElectron ? 'FeyaGate Desktop' : 'FeyaGate'}</Title>
               <Text type="secondary">
                 飞阳网关 · MCP 大模型智能家居网关 · 已接入小智 / 扣子 / Coze / OpenClaw ·{' '}
                 <Link onClick={() => {
