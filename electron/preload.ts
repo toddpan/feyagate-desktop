@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron')
 
 contextBridge.exposeInMainWorld('feyagate', {
   mcpCall: (method: string, params?: Record<string, unknown>) =>
@@ -28,4 +29,14 @@ contextBridge.exposeInMainWorld('feyagate', {
 
   fetchUrl: (url: string) =>
     ipcRenderer.invoke('fetch-url', url),
+
+  onServerReady: (callback: () => void) => {
+    ipcRenderer.on('server-ready', () => callback())
+  },
+
+  getServerStatus: () =>
+    ipcRenderer.invoke('server-status'),
+
+  restartServer: () =>
+    ipcRenderer.invoke('restart-server'),
 })

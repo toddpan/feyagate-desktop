@@ -191,9 +191,9 @@ export default function Auth() {
                 飞阳网关 · 小米智能设备管理 ·{' '}
                 <Link onClick={() => {
                   const open = window.feyagate?.openExternal ?? ((u: string) => { window.open(u, '_blank') })
-                  open('https://feya.sooncore.com')
+                  open('https://www.feyagate.com')
                 }}>
-                  feya.sooncore.com
+                  www.feyagate.com
                 </Link>
               </Text>
             </div>

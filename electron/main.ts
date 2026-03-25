@@ -52,41 +52,77 @@ function ensureUserConfig() {
   return userConfig
 }
 
-function startServer() {
-  const { binary } = getServerPaths()
+function startServer(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const { binary } = getServerPaths()
 
-  if (!fs.existsSync(binary)) {
-    console.error('[MCP Server] Binary not found:', binary)
-    return
+    if (!fs.existsSync(binary)) {
+      console.error('[MCP Server] Binary not found:', binary)
+      resolve(false)
+      return
+    }
+
+    const configPath = ensureUserConfig()
+
+    console.log('[MCP Server] Starting:', binary)
+    console.log('[MCP Server] Config:', configPath)
+
+    serverProcess = spawn(binary, ['--config', configPath], {
+      cwd: path.dirname(configPath),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    serverProcess.stdout?.on('data', (data: Buffer) => {
+      console.log('[MCP Server]', data.toString().trimEnd())
+    })
+
+    serverProcess.stderr?.on('data', (data: Buffer) => {
+      console.error('[MCP Server]', data.toString().trimEnd())
+    })
+
+    serverProcess.on('exit', (code, signal) => {
+      console.log(`[MCP Server] Exited: code=${code} signal=${signal}`)
+      serverProcess = null
+    })
+
+    serverProcess.on('error', (err) => {
+      console.error('[MCP Server] Spawn error:', err.message)
+      serverProcess = null
+      resolve(false)
+    })
+
+    waitForServerReady()
+      .then((ok) => {
+        if (ok) {
+          console.log('[MCP Server] Server is ready')
+          notifyServerReady()
+        }
+        resolve(ok)
+      })
+  })
+}
+
+function notifyServerReady() {
+  if (!mainWindow) return
+  const send = () => mainWindow?.webContents.send('server-ready')
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once('did-finish-load', send)
+  } else {
+    send()
   }
+}
 
-  const configPath = ensureUserConfig()
-
-  console.log('[MCP Server] Starting:', binary)
-  console.log('[MCP Server] Config:', configPath)
-
-  serverProcess = spawn(binary, ['--config', configPath], {
-    cwd: path.dirname(configPath),
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
-
-  serverProcess.stdout?.on('data', (data: Buffer) => {
-    console.log('[MCP Server]', data.toString().trimEnd())
-  })
-
-  serverProcess.stderr?.on('data', (data: Buffer) => {
-    console.error('[MCP Server]', data.toString().trimEnd())
-  })
-
-  serverProcess.on('exit', (code, signal) => {
-    console.log(`[MCP Server] Exited: code=${code} signal=${signal}`)
-    serverProcess = null
-  })
-
-  serverProcess.on('error', (err) => {
-    console.error('[MCP Server] Spawn error:', err.message)
-    serverProcess = null
-  })
+async function waitForServerReady(maxRetries = 30, intervalMs = 500): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const resp = await fetch(`${serverUrl}/health`, { signal: AbortSignal.timeout(1000) })
+      const json = await resp.json()
+      if (json.status === 'ok') return true
+    } catch { /* server not ready yet */ }
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  console.error('[MCP Server] Timed out waiting for server to become ready')
+  return false
 }
 
 function stopServer() {
@@ -237,13 +273,12 @@ ipcMain.handle('server-status', async () => {
 ipcMain.handle('restart-server', async () => {
   stopServer()
   await new Promise((r) => setTimeout(r, 1000))
-  startServer()
-  return true
+  return startServer()
 })
 
-app.whenReady().then(() => {
-  startServer()
+app.whenReady().then(async () => {
   createWindow()
+  await startServer()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

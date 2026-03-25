@@ -17,5 +17,8 @@ interface Window {
     healthCheck: () => Promise<boolean>
     openExternal?: (url: string) => Promise<void>
     fetchUrl?: (url: string) => Promise<unknown>
+    onServerReady?: (callback: () => void) => void
+    getServerStatus?: () => Promise<{ running: boolean }>
+    restartServer?: () => Promise<boolean>
   }
 }

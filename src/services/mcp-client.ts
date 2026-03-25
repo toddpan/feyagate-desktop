@@ -1,5 +1,3 @@
-// Browser fallback when running outside Electron (e.g. `vite dev` in browser)
-// In browser dev mode, use same-origin proxy; in Electron, use direct URL
 let _serverUrl = window.feyagate ? 'http://localhost:8080' : ''
 let _authCodeCallbacks: Array<(code: string) => void> = []
 
@@ -161,7 +159,11 @@ export async function initialize() {
 }
 
 export async function healthCheck(): Promise<boolean> {
-  return api.healthCheck()
+  try {
+    return await api.healthCheck()
+  } catch {
+    return false
+  }
 }
 
 export async function getServerUrl(): Promise<string> {

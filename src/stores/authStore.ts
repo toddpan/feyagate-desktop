@@ -24,10 +24,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   serverOnline: false,
 
   checkServer: async () => {
-    const online = await mcp.healthCheck()
-    set({ serverOnline: online })
-    if (online && !get().authorized) {
-      get().fetchStatus()
+    try {
+      const online = await mcp.healthCheck()
+      set({ serverOnline: online })
+      if (online && !get().authorized) {
+        get().fetchStatus()
+      }
+    } catch {
+      set({ serverOnline: false })
     }
   },
 
@@ -67,3 +71,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }))
+
+if (window.feyagate?.onServerReady) {
+  window.feyagate.onServerReady(() => {
+    console.log('[Auth] MCP server ready event received')
+    useAuthStore.getState().checkServer()
+  })
+}

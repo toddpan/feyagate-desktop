@@ -33,8 +33,17 @@ export default function AppLayout({ children }: Props) {
 
   useEffect(() => {
     checkServer()
-    timerRef.current = setInterval(checkServer, 5000)
-    return () => clearInterval(timerRef.current)
+    timerRef.current = setInterval(checkServer, 2000)
+    const unsub = useAuthStore.subscribe((s, prev) => {
+      if (s.serverOnline && !prev.serverOnline) {
+        clearInterval(timerRef.current)
+        timerRef.current = setInterval(checkServer, 15000)
+      } else if (!s.serverOnline && prev.serverOnline) {
+        clearInterval(timerRef.current)
+        timerRef.current = setInterval(checkServer, 2000)
+      }
+    })
+    return () => { clearInterval(timerRef.current); unsub() }
   }, [checkServer])
 
   return (
@@ -93,7 +102,7 @@ export default function AppLayout({ children }: Props) {
               style={{ cursor: 'pointer', color: token.colorTextSecondary }}
               onClick={() => {
                 const open = window.feyagate?.openExternal ?? ((u: string) => window.open(u, '_blank'))
-                open('https://feya.sooncore.com')
+                open('https://www.feyagate.com')
               }}
             />
           </Space>
