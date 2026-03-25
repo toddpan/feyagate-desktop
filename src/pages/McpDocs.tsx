@@ -343,7 +343,7 @@ export default function McpDocs() {
           <ApiOutlined style={{ fontSize: 28, color: '#1677ff' }} />
           <div>
             <Title level={4} style={{ margin: 0 }}>MCP 接口文档</Title>
-            <Text type="secondary">Model Context Protocol · JSON-RPC 2.0 · {tools.length} 个工具</Text>
+            <Text type="secondary">飞阳网关 MCP Server · JSON-RPC 2.0 · {tools.length} 个工具 · 让 AI 大模型成为你的智能家居管家</Text>
           </div>
         </Space>
       </Card>
@@ -496,9 +496,10 @@ function IntegrationTab() {
         </Paragraph>
       </Card>
 
-      <Card title="OpenClaw / 其他 MCP 客户端" size="small">
+      <Card title="OpenClaw / 扣子 / Coze / 其他 MCP 客户端" size="small">
         <Paragraph>
-          任何支持 MCP 协议的客户端（如 OpenClaw、Cursor、Cline 等）都可以通过 HTTP 端点连接：
+          FeyaGate 已接入小智智能体、扣子空间、Coze 智能体、OpenClaw 等平台。
+          任何支持 MCP 协议的客户端都可以通过 HTTP 端点连接，让 AI 大模型直接控制你的智能家居设备：
         </Paragraph>
         <Descriptions bordered column={1} size="small">
           <Descriptions.Item label="服务器类型">HTTP (Streamable HTTP)</Descriptions.Item>

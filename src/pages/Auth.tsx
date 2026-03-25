@@ -188,7 +188,7 @@ export default function Auth() {
             <div>
               <Title level={4} style={{ margin: 0 }}>FeyaGate Desktop</Title>
               <Text type="secondary">
-                飞阳网关 · 小米智能设备管理 ·{' '}
+                飞阳网关 · MCP 大模型智能家居网关 · 已接入小智 / 扣子 / Coze / OpenClaw ·{' '}
                 <Link onClick={() => {
                   const open = window.feyagate?.openExternal ?? ((u: string) => { window.open(u, '_blank') })
                   open('https://www.feyagate.com')
