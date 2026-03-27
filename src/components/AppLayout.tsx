@@ -8,6 +8,7 @@ import {
   LinkOutlined,
   ApiOutlined,
   BookOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
@@ -20,6 +21,7 @@ const menuItems = [
   { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
   { key: '/control', icon: <ControlOutlined />, label: '设备控制' },
   { key: '/cameras', icon: <CameraOutlined />, label: '摄像头' },
+  { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
   { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
 ]
 

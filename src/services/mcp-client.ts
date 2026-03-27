@@ -315,6 +315,42 @@ export async function xiaomiSceneTrigger(sceneId: string): Promise<Record<string
   return callTool('xiaomi/scene_trigger', { sceneId })
 }
 
+export interface XiaozhiStatus {
+  state: string
+  endpoint: string
+  connected: boolean
+  initialized: boolean
+  bridged_tools: number
+  enabled: boolean
+}
+
+export async function getXiaozhiStatus(): Promise<XiaozhiStatus> {
+  return callTool('xiaozhi/status', {}) as Promise<XiaozhiStatus>
+}
+
+export interface XiaozhiSetEndpointResult {
+  success: boolean
+  endpoint: string
+  config_saved: boolean
+  state: string
+}
+
+export async function xiaozhiSetEndpoint(endpoint: string): Promise<XiaozhiSetEndpointResult> {
+  return callTool('xiaozhi/set_endpoint', { endpoint }) as Promise<XiaozhiSetEndpointResult>
+}
+
+export async function xiaoaiTts(deviceId: string, text: string): Promise<Record<string, unknown>> {
+  return callTool('xiaoai/tts', { device_id: deviceId, text })
+}
+
+export async function xiaoaiPlayMusic(deviceId: string, text: string): Promise<Record<string, unknown>> {
+  return callTool('xiaoai/play_music', { device_id: deviceId, text })
+}
+
+export async function xiaoaiControl(deviceId: string, command: string, silence = true): Promise<Record<string, unknown>> {
+  return callTool('xiaoai/control', { device_id: deviceId, command, silence })
+}
+
 export async function getCameraSnapshot(
   cameraId: string,
   count = 1,

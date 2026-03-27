@@ -5,6 +5,7 @@ import Auth from './pages/Auth'
 import Devices from './pages/Devices'
 import Cameras from './pages/Cameras'
 import DeviceControl from './pages/DeviceControl'
+import XiaozhiSettings from './pages/XiaozhiSettings'
 import McpDocs from './pages/McpDocs'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/devices" element={<Devices />} />
         <Route path="/control" element={<DeviceControl />} />
         <Route path="/cameras" element={<Cameras />} />
+        <Route path="/xiaozhi" element={<XiaozhiSettings />} />
         <Route path="/docs" element={<McpDocs />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
