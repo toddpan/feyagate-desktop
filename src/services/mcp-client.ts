@@ -228,6 +228,93 @@ export async function disconnectCamera(cameraId: string) {
   return callTool('camera/disconnect', { camera_id: cameraId })
 }
 
+// Xiaomi device control
+export interface XiaomiArea {
+  area_id: string
+  name: string
+  device_count: number
+}
+
+export interface XiaomiDeviceClass {
+  device_class: string
+  count: number
+}
+
+export interface XiaomiDevice {
+  did: string
+  name: string
+  online: boolean
+  home_info: string
+  device_class: string
+  model: string
+}
+
+export interface SpecProperty {
+  iid: string
+  piid: number
+  name: string
+  format: string
+  access: string
+  valueRange?: unknown[]
+}
+
+export interface SpecAction {
+  iid: string
+  aiid: number
+  name: string
+  in: unknown[]
+}
+
+export interface SpecService {
+  siid: number
+  description: string
+  properties: SpecProperty[]
+  actions: SpecAction[]
+}
+
+export interface DeviceSpec {
+  specType: string
+  description: string
+  services: SpecService[]
+}
+
+export async function getXiaomiAreas(): Promise<{ areas: XiaomiArea[]; total_areas: number }> {
+  return callTool('xiaomi/get_area_info')
+}
+
+export async function getXiaomiDeviceClasses(): Promise<{ device_classes: XiaomiDeviceClass[]; total_classes: number }> {
+  return callTool('xiaomi/get_device_classes')
+}
+
+export async function getXiaomiDevices(areaId?: string, deviceClass?: string): Promise<{ devices: XiaomiDevice[]; count: number }> {
+  const args: Record<string, unknown> = {}
+  if (areaId) args.area_id = areaId
+  if (deviceClass) args.device_class = deviceClass
+  return callTool('xiaomi/get_devices', args)
+}
+
+export async function getXiaomiDeviceSpec(deviceId: string): Promise<DeviceSpec> {
+  return callTool('xiaomi/get_device_spec', { device_id: deviceId })
+}
+
+export async function xiaomiSendCtrlRpc(deviceId: string, iid: string, value?: unknown): Promise<Record<string, unknown>> {
+  const args: Record<string, unknown> = { device_id: deviceId, iid }
+  if (value !== undefined) args.value = value
+  return callTool('xiaomi/send_ctrl_rpc', args)
+}
+
+export async function xiaomiSendGetRpc(deviceId: string, iid: string): Promise<Record<string, unknown>> {
+  return callTool('xiaomi/send_get_rpc', { device_id: deviceId, iid })
+}
+
+export async function xiaomiSceneList(): Promise<Record<string, unknown>> {
+  return callTool('xiaomi/scene_list')
+}
+
+export async function xiaomiSceneTrigger(sceneId: string): Promise<Record<string, unknown>> {
+  return callTool('xiaomi/scene_trigger', { sceneId })
+}
+
 export async function getCameraSnapshot(
   cameraId: string,
   count = 1,

@@ -62,7 +62,7 @@ interface ToolDoc {
   name: string
   description: string
   icon: React.ReactNode
-  category: 'auth' | 'device' | 'camera'
+  category: 'auth' | 'device' | 'camera' | 'xiaomi'
   params: Array<{ name: string; type: string; required: boolean; desc: string }>
   example: { request: string; response: string }
 }
@@ -268,6 +268,109 @@ const tools: ToolDoc[] = [
 }`,
     },
   },
+  // ── 米家设备控制工具 ──────────────────────────────────────────
+  {
+    name: 'xiaomi/get_area_info',
+    description: '获取小米智能家居的房间/区域列表。返回 area_id 和名称，供 xiaomi/get_devices 过滤使用。',
+    icon: <AppstoreOutlined />,
+    category: 'xiaomi',
+    params: [],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'xiaomi/get_area_info', arguments: {} } }, null, 2),
+      response: JSON.stringify({ areas: [{ area_id: '客厅', name: '客厅', device_count: 20 }, { area_id: '卧室', name: '卧室', device_count: 5 }], total_areas: 2 }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/get_device_classes',
+    description: '获取当前已导入的小米设备类别列表（如 light、plug、sensor_ht 等）。供 xiaomi/get_devices 按类别过滤。',
+    icon: <AppstoreOutlined />,
+    category: 'xiaomi',
+    params: [],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'xiaomi/get_device_classes', arguments: {} } }, null, 2),
+      response: JSON.stringify({ device_classes: [{ device_class: 'light', count: 7 }, { device_class: 'plug', count: 2 }], total_classes: 2 }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/get_devices',
+    description: '获取小米设备列表，支持按区域 area_id 和设备类别 device_class 过滤。返回 did、名称、在线状态等。',
+    icon: <AppstoreOutlined />,
+    category: 'xiaomi',
+    params: [
+      { name: 'area_id', type: 'string', required: false, desc: '区域ID，从 get_area_info 获取' },
+      { name: 'device_class', type: 'string', required: false, desc: '设备类别，从 get_device_classes 获取' },
+    ],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'xiaomi/get_devices', arguments: { area_id: '客厅', device_class: 'light' } } }, null, 2),
+      response: JSON.stringify({ devices: [{ did: '534345813', name: '客厅台灯', online: true, home_info: '客厅', device_class: 'light', model: 'yeelink.light.lamp2' }], count: 1 }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/get_device_spec',
+    description: '获取设备的 MIOT SPEC 功能定义（服务、属性、动作），返回轻量化格式。每个属性/动作包含 iid 标识符。',
+    icon: <AppstoreOutlined />,
+    category: 'xiaomi',
+    params: [
+      { name: 'device_id', type: 'string', required: true, desc: '小米设备ID (did)' },
+    ],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'xiaomi/get_device_spec', arguments: { device_id: '534345813' } } }, null, 2),
+      response: JSON.stringify({ specType: 'urn:miot-spec-v2:device:light:...', services: [{ siid: 2, description: 'Light', properties: [{ iid: 'prop.device.2.1', name: 'Switch', format: 'bool', access: 'read,write' }], actions: [{ iid: 'action.device.2.1', name: 'Toggle', in: [] }] }] }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/send_ctrl_rpc',
+    description: '统一控制小米设备。iid 格式: prop.device.siid.piid (属性) 或 action.device.siid.aiid (动作)。',
+    icon: <ThunderboltOutlined />,
+    category: 'xiaomi',
+    params: [
+      { name: 'device_id', type: 'string', required: true, desc: '设备ID' },
+      { name: 'iid', type: 'string', required: true, desc: 'SPEC 实例 ID，如 prop.device.2.1' },
+      { name: 'value', type: 'any', required: false, desc: '属性值或动作参数数组' },
+    ],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'xiaomi/send_ctrl_rpc', arguments: { device_id: '534345813', iid: 'prop.device.2.1', value: true } } }, null, 2),
+      response: JSON.stringify({ success: true, data: { code: 0, message: 'ok' } }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/send_get_rpc',
+    description: '查询小米设备的单个属性当前值。仅支持 prop 类型 iid。',
+    icon: <ThunderboltOutlined />,
+    category: 'xiaomi',
+    params: [
+      { name: 'device_id', type: 'string', required: true, desc: '设备ID' },
+      { name: 'iid', type: 'string', required: true, desc: 'SPEC 属性实例 ID，如 prop.device.2.1' },
+    ],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'xiaomi/send_get_rpc', arguments: { device_id: '534345813', iid: 'prop.device.2.1' } } }, null, 2),
+      response: JSON.stringify({ code: 0, result: [{ did: '534345813', siid: 2, piid: 1, value: true, code: 0 }] }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/scene_list',
+    description: '获取小米手动场景列表，返回 sceneId 和场景名称。',
+    icon: <ThunderboltOutlined />,
+    category: 'xiaomi',
+    params: [],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 17, method: 'tools/call', params: { name: 'xiaomi/scene_list', arguments: {} } }, null, 2),
+      response: JSON.stringify({ result: [{ scene_id: '123', name: '回家模式' }] }, null, 2),
+    },
+  },
+  {
+    name: 'xiaomi/scene_trigger',
+    description: '触发执行小米手动场景。需先通过 xiaomi/scene_list 获取 sceneId。',
+    icon: <ThunderboltOutlined />,
+    category: 'xiaomi',
+    params: [
+      { name: 'sceneId', type: 'string', required: true, desc: '场景ID' },
+    ],
+    example: {
+      request: JSON.stringify({ jsonrpc: '2.0', id: 18, method: 'tools/call', params: { name: 'xiaomi/scene_trigger', arguments: { sceneId: '123' } } }, null, 2),
+      response: JSON.stringify({ code: 0, message: 'ok' }, null, 2),
+    },
+  },
 ]
 
 const paramColumns = [
@@ -285,7 +388,7 @@ function ToolCard({ tool }: { tool: ToolDoc }) {
         <Space>
           {tool.icon}
           <Text code style={{ fontSize: 14 }}>{tool.name}</Text>
-          <Tag color={tool.category === 'auth' ? 'green' : tool.category === 'device' ? 'blue' : 'purple'}>
+          <Tag color={tool.category === 'auth' ? 'green' : tool.category === 'device' ? 'blue' : tool.category === 'xiaomi' ? 'orange' : 'purple'}>
             {tool.category}
           </Tag>
         </Space>
@@ -463,9 +566,10 @@ function ToolsTab() {
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <Space wrap>
         <Tag.CheckableTag checked={category === 'all'} onChange={() => setCategory('all')}>全部 ({tools.length})</Tag.CheckableTag>
-        <Tag.CheckableTag checked={category === 'auth'} onChange={() => setCategory('auth')}>授权 (3)</Tag.CheckableTag>
-        <Tag.CheckableTag checked={category === 'device'} onChange={() => setCategory('device')}>设备 (2)</Tag.CheckableTag>
-        <Tag.CheckableTag checked={category === 'camera'} onChange={() => setCategory('camera')}>摄像头 (5)</Tag.CheckableTag>
+        <Tag.CheckableTag checked={category === 'auth'} onChange={() => setCategory('auth')}>授权 ({tools.filter(t => t.category === 'auth').length})</Tag.CheckableTag>
+        <Tag.CheckableTag checked={category === 'device'} onChange={() => setCategory('device')}>设备 ({tools.filter(t => t.category === 'device').length})</Tag.CheckableTag>
+        <Tag.CheckableTag checked={category === 'xiaomi'} onChange={() => setCategory('xiaomi')}>米家控制 ({tools.filter(t => t.category === 'xiaomi').length})</Tag.CheckableTag>
+        <Tag.CheckableTag checked={category === 'camera'} onChange={() => setCategory('camera')}>摄像头 ({tools.filter(t => t.category === 'camera').length})</Tag.CheckableTag>
       </Space>
       {filtered.map((tool) => (
         <ToolCard key={tool.name} tool={tool} />
@@ -530,29 +634,49 @@ function IntegrationTab() {
 }`} />
       </Card>
 
-      <Card title="典型使用流程" size="small">
+      <Card title="设备控制流程" size="small">
+        <Paragraph>
+          以下是通过 MCP 接口控制米家设备的完整流程（以控制灯为例）：
+        </Paragraph>
+        <CodeBlock code={`# 1. 检查授权
+auth/status → 确认 authorized=true
+
+# 2. 查看区域和设备类别
+xiaomi/get_area_info → 获取房间列表
+xiaomi/get_device_classes → 获取设备类别
+
+# 3. 按区域+类别筛选设备
+xiaomi/get_devices(area_id="客厅", device_class="light") → 获取 did
+
+# 4. 获取设备 SPEC（属性和动作定义）
+xiaomi/get_device_spec(device_id="534345813") → 获取 iid 列表
+
+# 5. 读取属性
+xiaomi/send_get_rpc(device_id="534345813", iid="prop.device.2.1") → 开关状态
+
+# 6. 控制设备
+xiaomi/send_ctrl_rpc(device_id="534345813", iid="prop.device.2.1", value=true)  → 开灯
+xiaomi/send_ctrl_rpc(device_id="534345813", iid="prop.device.2.2", value=70)    → 亮度70%
+xiaomi/send_ctrl_rpc(device_id="534345813", iid="action.device.2.1")            → Toggle`} language="bash" />
+      </Card>
+
+      <Card title="摄像头使用流程" size="small">
         <Paragraph>
           以下是通过 MCP 接口管理摄像头的完整流程：
         </Paragraph>
-        <CodeBlock code={`# 1. 检查授权状态
-auth/status → 确认 authorized=true
-
-# 2. 获取设备列表
-device/list → 找到所有设备和摄像头
-
-# 3. 列出摄像头
+        <CodeBlock code={`# 1. 列出摄像头
 camera/list → 获取 camera_id
 
-# 4. 连接摄像头
+# 2. 连接摄像头
 camera/connect(camera_id="xxx") → 开始视频流
 
-# 5. 等待几秒让缓冲区填充帧
+# 3. 等待几秒让缓冲区填充帧
 camera/status(camera_id="xxx") → 确认 buffered_frames > 0
 
-# 6. 获取快照
+# 4. 获取快照
 camera/snapshot(camera_id="xxx", count=1) → 返回 JPEG base64 图片
 
-# 7. 断开连接
+# 5. 断开连接
 camera/disconnect(camera_id="xxx") → 停止流并释放资源`} language="bash" />
       </Card>
 

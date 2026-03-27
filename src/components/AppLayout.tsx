@@ -4,6 +4,7 @@ import {
   LoginOutlined,
   AppstoreOutlined,
   CameraOutlined,
+  ControlOutlined,
   LinkOutlined,
   ApiOutlined,
   BookOutlined,
@@ -17,6 +18,7 @@ const { Text } = Typography
 const menuItems = [
   { key: '/', icon: <LoginOutlined />, label: '授权登录' },
   { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
+  { key: '/control', icon: <ControlOutlined />, label: '设备控制' },
   { key: '/cameras', icon: <CameraOutlined />, label: '摄像头' },
   { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
 ]
