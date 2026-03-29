@@ -201,35 +201,95 @@ async function healthCheck(): Promise<boolean> {
 
 function openOAuthWindow(url: string) {
   if (oauthWindow) {
-    oauthWindow.focus()
-    return
+    if (oauthWindow.isDestroyed()) {
+      oauthWindow = null
+    } else {
+      oauthWindow.focus()
+      return
+    }
   }
+
+  let codeHandled = false
+  const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined
 
   oauthWindow = new BrowserWindow({
     width: 800,
     height: 700,
-    parent: mainWindow ?? undefined,
+    parent,
     modal: false,
     title: 'Xiaomi Login',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      partition: 'persist:oauth',
     },
   })
 
-  // Intercept redirect to https://127.0.0.1 to capture OAuth code
+  function redirectToServerCallback(redirectUrl: string): boolean {
+    if (codeHandled) return true
+    if (!redirectUrl.startsWith('https://127.0.0.1')) return false
+
+    let code: string | null = null
+    try {
+      const parsed = new URL(redirectUrl)
+      code = parsed.searchParams.get('code')
+    } catch {
+      return false
+    }
+    if (!code) return false
+
+    codeHandled = true
+    console.log('[OAuth] Captured code, redirecting to server /auth/callback')
+
+    const callbackUrl = `${serverUrl}/auth/callback?code=${encodeURIComponent(code)}`
+    if (oauthWindow && !oauthWindow.isDestroyed()) {
+      oauthWindow.loadURL(callbackUrl)
+    }
+    return true
+  }
+
+  // Primary: intercept navigation before it happens
+  oauthWindow.webContents.on('will-navigate', (event, navUrl) => {
+    if (redirectToServerCallback(navUrl)) {
+      event.preventDefault()
+    }
+  })
+
+  oauthWindow.webContents.on('will-redirect', (event, navUrl) => {
+    if (redirectToServerCallback(navUrl)) {
+      event.preventDefault()
+    }
+  })
+
+  // Backup: webRequest filter (isolated to this session via partition)
   oauthWindow.webContents.session.webRequest.onBeforeRequest(
     { urls: ['https://127.0.0.1/*'] },
     (details, callback) => {
-      const url = new URL(details.url)
-      const code = url.searchParams.get('code')
-      if (code && mainWindow) {
-        mainWindow.webContents.send('oauth-code', code)
-      }
+      redirectToServerCallback(details.url)
       callback({ cancel: true })
-      oauthWindow?.close()
     }
   )
+
+  // Last resort: page failed to load — extract code from the failed URL
+  oauthWindow.webContents.on('did-fail-load', (_event, _errorCode, _errorDesc, failedUrl) => {
+    redirectToServerCallback(failedUrl)
+  })
+
+  // After server callback page loads, notify renderer to refresh auth status
+  oauthWindow.webContents.on('did-finish-load', () => {
+    if (!oauthWindow || oauthWindow.isDestroyed()) return
+    const currentUrl = oauthWindow.webContents.getURL()
+    if (currentUrl.includes('/auth/callback')) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('auth-success')
+      }
+      setTimeout(() => {
+        if (oauthWindow && !oauthWindow.isDestroyed()) {
+          oauthWindow.close()
+        }
+      }, 3000)
+    }
+  })
 
   oauthWindow.loadURL(url)
 

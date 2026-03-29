@@ -12,6 +12,7 @@ interface Window {
     callTool: (name: string, args?: Record<string, unknown>) => Promise<unknown>
     openOAuth: (url: string) => Promise<void>
     onAuthCode: (callback: (code: string) => void) => void
+    onAuthSuccess?: (callback: () => void) => void
     getServerUrl: () => Promise<string>
     setServerUrl: (url: string) => Promise<void>
     healthCheck: () => Promise<boolean>

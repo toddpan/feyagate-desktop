@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('feyagate', {
     ipcRenderer.on('oauth-code', (_event, code: string) => callback(code))
   },
 
+  onAuthSuccess: (callback: () => void) => {
+    ipcRenderer.on('auth-success', () => callback())
+  },
+
   getServerUrl: () =>
     ipcRenderer.invoke('get-server-url'),
 

@@ -197,6 +197,12 @@ export function onAuthCode(callback: (code: string) => void) {
   api.onAuthCode(callback)
 }
 
+export function onAuthSuccess(callback: () => void) {
+  if (window.feyagate?.onAuthSuccess) {
+    window.feyagate.onAuthSuccess(callback)
+  }
+}
+
 // Devices
 export async function getDeviceList(filter?: string[]): Promise<DeviceListResult> {
   const args: Record<string, unknown> = {}

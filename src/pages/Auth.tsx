@@ -85,12 +85,22 @@ export default function Auth() {
   }, [serverOnline, fetchStatus])
 
   useEffect(() => {
+    // Fallback: renderer receives raw code and calls auth/callback itself
     mcp.onAuthCode(async (code) => {
       await handleCallback(code)
       setShowManualAuth(false)
       message.success('授权成功！')
     })
-  }, [handleCallback])
+
+    // Primary: main process already called auth/callback, just refresh UI
+    if (window.feyagate?.onAuthSuccess) {
+      window.feyagate.onAuthSuccess(() => {
+        setShowManualAuth(false)
+        fetchStatus()
+        message.success('授权成功！')
+      })
+    }
+  }, [handleCallback, fetchStatus])
 
   useEffect(() => {
     mcp.getServerUrl().then(setServerUrlInput)
