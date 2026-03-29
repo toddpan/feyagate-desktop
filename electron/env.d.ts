@@ -8,6 +8,7 @@ declare namespace NodeJS {
 
 interface Window {
   feyagate?: {
+    platform: string
     mcpCall: (method: string, params?: Record<string, unknown>) => Promise<unknown>
     callTool: (name: string, args?: Record<string, unknown>) => Promise<unknown>
     openOAuth: (url: string) => Promise<void>
@@ -17,6 +18,8 @@ interface Window {
     setServerUrl: (url: string) => Promise<void>
     healthCheck: () => Promise<boolean>
     openExternal?: (url: string) => Promise<void>
+    openWeChatOAuth?: (qrUrl: string, callbackHost: string) => Promise<void>
+    onWeChatCode?: (callback: (code: string) => void) => void
     fetchUrl?: (url: string) => Promise<unknown>
     onServerReady?: (callback: () => void) => void
     getServerStatus?: () => Promise<{ running: boolean }>
