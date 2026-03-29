@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow: BrowserWindow | null = null
 let oauthWindow: BrowserWindow | null = null
+let wechatOAuthWindow: BrowserWindow | null = null
 let serverUrl = 'http://localhost:38080'
 let serverProcess: ChildProcess | null = null
 const DEFAULT_HTTP_PORT = 38080
@@ -298,6 +299,86 @@ function openOAuthWindow(url: string) {
   })
 }
 
+function openWeChatOAuthWindow(qrUrl: string, callbackHost: string) {
+  if (wechatOAuthWindow) {
+    if (wechatOAuthWindow.isDestroyed()) {
+      wechatOAuthWindow = null
+    } else {
+      wechatOAuthWindow.focus()
+      return
+    }
+  }
+
+  let codeHandled = false
+  const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined
+
+  wechatOAuthWindow = new BrowserWindow({
+    width: 520,
+    height: 640,
+    parent,
+    modal: false,
+    title: '微信扫码登录',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  })
+
+  function tryExtractCode(url: string): boolean {
+    if (codeHandled) return true
+    if (!url.includes(callbackHost)) return false
+
+    let code: string | null = null
+    try {
+      const parsed = new URL(url)
+      code = parsed.searchParams.get('code')
+    } catch {
+      return false
+    }
+    if (!code) return false
+
+    codeHandled = true
+    console.log('[WeChat OAuth] Captured code from callback')
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('wechat-auth-code', code)
+    }
+
+    setTimeout(() => {
+      if (wechatOAuthWindow && !wechatOAuthWindow.isDestroyed()) {
+        wechatOAuthWindow.close()
+      }
+    }, 500)
+    return true
+  }
+
+  wechatOAuthWindow.webContents.on('will-navigate', (event, navUrl) => {
+    if (tryExtractCode(navUrl)) {
+      event.preventDefault()
+    }
+  })
+
+  wechatOAuthWindow.webContents.on('will-redirect', (event, navUrl) => {
+    if (tryExtractCode(navUrl)) {
+      event.preventDefault()
+    }
+  })
+
+  wechatOAuthWindow.webContents.on('did-navigate', (_event, navUrl) => {
+    tryExtractCode(navUrl)
+  })
+
+  wechatOAuthWindow.webContents.on('did-fail-load', (_event, _errorCode, _errorDesc, failedUrl) => {
+    tryExtractCode(failedUrl)
+  })
+
+  wechatOAuthWindow.loadURL(qrUrl)
+
+  wechatOAuthWindow.on('closed', () => {
+    wechatOAuthWindow = null
+  })
+}
+
 // IPC handlers
 ipcMain.handle('mcp-call', async (_event, method: string, params?: Record<string, unknown>) => {
   return mcpJsonRpc(method, params)
@@ -325,6 +406,10 @@ ipcMain.handle('health-check', async () => {
 
 ipcMain.handle('open-external', async (_event, url: string) => {
   shell.openExternal(url)
+})
+
+ipcMain.handle('open-wechat-oauth', async (_event, qrUrl: string, callbackHost: string) => {
+  openWeChatOAuthWindow(qrUrl, callbackHost)
 })
 
 ipcMain.handle('fetch-url', async (_event, url: string) => {

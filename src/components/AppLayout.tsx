@@ -10,10 +10,12 @@ import {
   BookOutlined,
   ThunderboltOutlined,
   SafetyCertificateOutlined,
+  WechatOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useLicenseStore } from '../stores/licenseStore'
+import { useUserStore } from '../stores/userStore'
 import { isCameraSupported } from '../services/mcp-client'
 import { Tooltip } from 'antd'
 
@@ -39,6 +41,7 @@ const menuItems = [
   },
   { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
   { key: '/license', icon: <SafetyCertificateOutlined />, label: '设备授权' },
+  // { key: '/wechat', icon: <WechatOutlined />, label: '微信登录' },
   { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
 ]
 
@@ -53,8 +56,13 @@ export default function AppLayout({ children }: Props) {
   const checkServer = useAuthStore((s) => s.checkServer)
   const licenseEdition = useLicenseStore((s) => s.edition)
   const fetchLicense = useLicenseStore((s) => s.fetchStatus)
+  const wechatUser = useUserStore((s) => s.user)
+  const wechatLoggedIn = useUserStore((s) => s.isLoggedIn)
+  const restoreSession = useUserStore((s) => s.restoreSession)
   const { token } = theme.useToken()
   const timerRef = useRef<ReturnType<typeof setInterval>>()
+
+  useEffect(() => { restoreSession() }, [restoreSession])
 
   useEffect(() => {
     checkServer()
@@ -116,6 +124,16 @@ export default function AppLayout({ children }: Props) {
         >
           <Text strong style={{ fontSize: 16 }}>FeyaGate Desktop</Text>
           <Space>
+            {/* WeChat login hidden - uncomment when web app ID is configured
+            {wechatLoggedIn && wechatUser && (
+              <Text
+                style={{ cursor: 'pointer', fontSize: 13 }}
+                onClick={() => navigate('/wechat')}
+              >
+                <WechatOutlined style={{ color: '#07c160', marginRight: 4 }} />
+                {wechatUser.nickname}
+              </Text>
+            )} */}
             {serverOnline && (
               <Badge
                 status={licenseEdition === 'licensed' ? 'success' : 'warning'}
