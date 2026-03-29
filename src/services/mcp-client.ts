@@ -373,6 +373,79 @@ export async function xiaoaiControl(deviceId: string, command: string, silence =
   return callTool('xiaoai/control', { device_id: deviceId, command, silence })
 }
 
+// License (virtual gateway device authorization)
+export interface LicenseInfo {
+  edition: string       // "free" | "licensed"
+  status: string        // "free" | "pending" | "activated"
+  product: string       // e.g. "feyagate-linux"
+  key_masked: string    // e.g. "FG-ABCD-****-IJKL"
+  device_id: string     // 12-char hex device ID
+  guidance?: {
+    message: string
+    how_to_authorize: string
+    free_features: string
+    licensed_features: string
+  }
+  activated?: boolean
+  message?: string
+}
+
+export interface GatewayInfo {
+  name: string
+  version: string
+  platform: string
+  device_id: string
+  license: {
+    edition: string
+    status: string
+    product: string
+    key_masked?: string
+  }
+}
+
+export async function getLicenseStatus(): Promise<LicenseInfo> {
+  return callTool<LicenseInfo>('license/status')
+}
+
+export async function setLicenseKey(licenseKey: string, product?: string): Promise<LicenseInfo> {
+  const args: Record<string, unknown> = { license_key: licenseKey }
+  if (product) args.product = product
+  return callTool<LicenseInfo>('license/set', args)
+}
+
+export async function clearLicense(): Promise<LicenseInfo> {
+  return callTool<LicenseInfo>('license/clear')
+}
+
+export async function getGatewayInfo(): Promise<GatewayInfo> {
+  return callTool<GatewayInfo>('gateway/info')
+}
+
+// REST API alternatives (direct HTTP, for non-MCP clients)
+export async function getLicenseStatusRest(): Promise<LicenseInfo> {
+  const resp = await fetch(`${_serverUrl}/api/v1/gateway/license`)
+  const json = await resp.json()
+  return json.data as LicenseInfo
+}
+
+export async function setLicenseKeyRest(licenseKey: string, product?: string): Promise<LicenseInfo> {
+  const body: Record<string, string> = { license_key: licenseKey }
+  if (product) body.product = product
+  const resp = await fetch(`${_serverUrl}/api/v1/gateway/license`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const json = await resp.json()
+  return json.data as LicenseInfo
+}
+
+export async function clearLicenseRest(): Promise<LicenseInfo> {
+  const resp = await fetch(`${_serverUrl}/api/v1/gateway/license`, { method: 'DELETE' })
+  const json = await resp.json()
+  return json.data as LicenseInfo
+}
+
 export async function getCameraSnapshot(
   cameraId: string,
   count = 1,

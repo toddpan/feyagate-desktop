@@ -6,6 +6,7 @@ import Devices from './pages/Devices'
 import Cameras from './pages/Cameras'
 import DeviceControl from './pages/DeviceControl'
 import XiaozhiSettings from './pages/XiaozhiSettings'
+import LicenseSettings from './pages/LicenseSettings'
 import McpDocs from './pages/McpDocs'
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/control" element={<DeviceControl />} />
         <Route path="/cameras" element={<Cameras />} />
         <Route path="/xiaozhi" element={<XiaozhiSettings />} />
+        <Route path="/license" element={<LicenseSettings />} />
         <Route path="/docs" element={<McpDocs />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

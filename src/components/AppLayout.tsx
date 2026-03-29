@@ -9,9 +9,11 @@ import {
   ApiOutlined,
   BookOutlined,
   ThunderboltOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
+import { useLicenseStore } from '../stores/licenseStore'
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
@@ -22,6 +24,7 @@ const menuItems = [
   { key: '/control', icon: <ControlOutlined />, label: '设备控制' },
   { key: '/cameras', icon: <CameraOutlined />, label: '摄像头' },
   { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
+  { key: '/license', icon: <SafetyCertificateOutlined />, label: '设备授权' },
   { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
 ]
 
@@ -34,6 +37,8 @@ export default function AppLayout({ children }: Props) {
   const location = useLocation()
   const serverOnline = useAuthStore((s) => s.serverOnline)
   const checkServer = useAuthStore((s) => s.checkServer)
+  const licenseEdition = useLicenseStore((s) => s.edition)
+  const fetchLicense = useLicenseStore((s) => s.fetchStatus)
   const { token } = theme.useToken()
   const timerRef = useRef<ReturnType<typeof setInterval>>()
 
@@ -44,13 +49,14 @@ export default function AppLayout({ children }: Props) {
       if (s.serverOnline && !prev.serverOnline) {
         clearInterval(timerRef.current)
         timerRef.current = setInterval(checkServer, 15000)
+        fetchLicense()
       } else if (!s.serverOnline && prev.serverOnline) {
         clearInterval(timerRef.current)
         timerRef.current = setInterval(checkServer, 2000)
       }
     })
     return () => { clearInterval(timerRef.current); unsub() }
-  }, [checkServer])
+  }, [checkServer, fetchLicense])
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -96,6 +102,20 @@ export default function AppLayout({ children }: Props) {
         >
           <Text strong style={{ fontSize: 16 }}>FeyaGate Desktop</Text>
           <Space>
+            {serverOnline && (
+              <Badge
+                status={licenseEdition === 'licensed' ? 'success' : 'warning'}
+                text={
+                  <Text
+                    type={licenseEdition === 'licensed' ? undefined : 'warning'}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate('/license')}
+                  >
+                    {licenseEdition === 'licensed' ? '授权版' : '免费版'}
+                  </Text>
+                }
+              />
+            )}
             <Badge
               status={serverOnline ? 'success' : 'error'}
               text={
