@@ -8,6 +8,7 @@ declare namespace NodeJS {
 
 interface Window {
   feyagate?: {
+    platform: string
     mcpCall: (method: string, params?: Record<string, unknown>) => Promise<unknown>
     callTool: (name: string, args?: Record<string, unknown>) => Promise<unknown>
     openOAuth: (url: string) => Promise<void>

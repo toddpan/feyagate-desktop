@@ -25,8 +25,10 @@ import {
 } from '@ant-design/icons'
 import { useCameraStore } from '../stores/cameraStore'
 import { useAuthStore } from '../stores/authStore'
+import { isCameraSupported } from '../services/mcp-client'
 import StatusBadge from '../components/StatusBadge'
 import { useState } from 'react'
+import { Result } from 'antd'
 
 const { Text, Title } = Typography
 
@@ -51,14 +53,14 @@ export default function Cameras() {
   const pollRef = useRef<ReturnType<typeof setInterval>>()
 
   useEffect(() => {
-    if (serverOnline && authorized) {
+    if (serverOnline && authorized && isCameraSupported()) {
       fetchCameras()
       fetchStatus()
     }
   }, [serverOnline, authorized, fetchCameras, fetchStatus])
 
   useEffect(() => {
-    if (serverOnline && authorized) {
+    if (serverOnline && authorized && isCameraSupported()) {
       pollRef.current = setInterval(() => fetchStatus(), 3000)
       return () => clearInterval(pollRef.current)
     }
@@ -66,6 +68,30 @@ export default function Cameras() {
 
   if (!serverOnline) return <Empty description="MCP 服务器未连接" />
   if (!authorized) return <Empty description="请先完成米家账号授权" />
+
+  if (!isCameraSupported()) {
+    return (
+      <Result
+        status="warning"
+        title="Windows 平台暂不支持摄像头功能"
+        subTitle="摄像头连接和抓拍功能依赖米家 P2P 协议库，目前仅支持 macOS 和 Linux (Ubuntu) 平台。"
+        extra={
+          <Alert
+            type="info"
+            showIcon
+            message="平台支持说明"
+            description={
+              <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
+                <li><Text strong>macOS</Text> — 完整支持（x86_64 / arm64）</li>
+                <li><Text strong>Linux (Ubuntu)</Text> — 完整支持（x86_64 / arm64）</li>
+                <li><Text strong>Windows</Text> — 暂不支持，后续版本将添加</li>
+              </ul>
+            }
+          />
+        }
+      />
+    )
+  }
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>

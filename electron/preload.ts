@@ -2,6 +2,8 @@
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron')
 
 contextBridge.exposeInMainWorld('feyagate', {
+  platform: process.platform,
+
   mcpCall: (method: string, params?: Record<string, unknown>) =>
     ipcRenderer.invoke('mcp-call', method, params),
 

@@ -14,15 +14,29 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useLicenseStore } from '../stores/licenseStore'
+import { isCameraSupported } from '../services/mcp-client'
+import { Tooltip } from 'antd'
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
+
+const cameraSupported = isCameraSupported()
 
 const menuItems = [
   { key: '/', icon: <LoginOutlined />, label: '授权登录' },
   { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
   { key: '/control', icon: <ControlOutlined />, label: '设备控制' },
-  { key: '/cameras', icon: <CameraOutlined />, label: '摄像头' },
+  {
+    key: '/cameras',
+    icon: <CameraOutlined />,
+    label: cameraSupported
+      ? '摄像头'
+      : (
+          <Tooltip title="Windows 平台暂不支持" placement="right">
+            <span style={{ color: 'rgba(0,0,0,0.25)' }}>摄像头</span>
+          </Tooltip>
+        ),
+  },
   { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
   { key: '/license', icon: <SafetyCertificateOutlined />, label: '设备授权' },
   { key: '/docs', icon: <BookOutlined />, label: '接口文档' },

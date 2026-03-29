@@ -481,3 +481,21 @@ export async function getCameraSnapshot(
 
   return { images, raw: result }
 }
+
+/**
+ * Detect client platform. In Electron, uses process.platform exposed via preload.
+ * In browser, falls back to navigator.userAgent detection.
+ * Returns: 'win32' | 'darwin' | 'linux' | 'unknown'
+ */
+export function getClientPlatform(): string {
+  if (window.feyagate?.platform) return window.feyagate.platform
+  const ua = navigator.userAgent.toLowerCase()
+  if (ua.includes('win')) return 'win32'
+  if (ua.includes('mac')) return 'darwin'
+  if (ua.includes('linux')) return 'linux'
+  return 'unknown'
+}
+
+export function isCameraSupported(): boolean {
+  return getClientPlatform() !== 'win32'
+}
