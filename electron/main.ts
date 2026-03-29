@@ -10,6 +10,7 @@ let mainWindow: BrowserWindow | null = null
 let oauthWindow: BrowserWindow | null = null
 let serverUrl = 'http://localhost:38080'
 let serverProcess: ChildProcess | null = null
+const DEFAULT_HTTP_PORT = 38080
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
@@ -48,6 +49,11 @@ function ensureUserConfig() {
     `token_file: "${tokenFile.replace(/\\/g, '/')}"`
   )
   fs.writeFileSync(userConfig, cfg, 'utf-8')
+
+  const portMatch = cfg.match(/http_port:\s*(\d+)/)
+  const port = portMatch ? parseInt(portMatch[1], 10) : DEFAULT_HTTP_PORT
+  serverUrl = `http://localhost:${port}`
+  console.log(`[MCP Server] Detected port from config: ${port}`)
 
   return userConfig
 }

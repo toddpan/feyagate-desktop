@@ -88,7 +88,7 @@ export default function Cameras() {
       >
         <Text type="secondary">
           共 {cameras.length} 个摄像头 ·{' '}
-          {Object.values(statusMap).filter((s) => s.status === 'streaming').length} 个已连接
+          {Object.values(statusMap).filter((s) => s.status === 'connected' || s.status === 'streaming').length} 个已连接
         </Text>
       </Card>
 
@@ -99,7 +99,7 @@ export default function Cameras() {
           <Row gutter={[16, 16]}>
             {cameras.map((camera) => {
               const status = statusMap[camera.did]
-              const isConnected = status?.status === 'streaming'
+              const isConnected = status?.status === 'connected' || status?.status === 'streaming'
               const isConnecting = connecting === camera.did
               const cameraSnapshots = snapshots[camera.did] ?? []
 

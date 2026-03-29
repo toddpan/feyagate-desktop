@@ -98,9 +98,10 @@ export interface CameraListResult {
 
 export interface CameraStatusItem {
   did: string
+  camera_id?: string
   status: string
   buffered_frames: number
-  channel: number
+  channel?: number
 }
 
 export interface CameraStatusResult {
@@ -217,7 +218,22 @@ export async function getCameraList(filter?: string[]): Promise<CameraListResult
 export async function getCameraStatus(cameraId?: string): Promise<CameraStatusResult> {
   const args: Record<string, unknown> = {}
   if (cameraId) args.camera_id = cameraId
-  return callTool<CameraStatusResult>('camera/status', args)
+  const raw = await callTool<Record<string, unknown>>('camera/status', args)
+
+  if (Array.isArray(raw.cameras)) {
+    const cameras = (raw.cameras as CameraStatusItem[]).map((c) => ({
+      ...c,
+      did: c.did || c.camera_id || '',
+    }))
+    return { connected_count: raw.connected_count as number, cameras }
+  }
+
+  const item: CameraStatusItem = {
+    did: (raw.camera_id as string) || '',
+    status: raw.status as string,
+    buffered_frames: (raw.buffered_frames as number) || 0,
+  }
+  return { connected_count: item.status === 'connected' ? 1 : 0, cameras: [item] }
 }
 
 export async function connectCamera(cameraId: string) {
@@ -364,11 +380,23 @@ export async function getCameraSnapshot(
 
   const images = parseToolImage(result)
 
-  // Fallback: some servers embed base64 in text content as data URLs
   if (images.length === 0) {
-    const textItem = result.content?.find((c) => c.type === 'text' && c.text?.startsWith('data:'))
+    const textItem = result.content?.find((c) => c.type === 'text' && c.text)
     if (textItem?.text) {
-      images.push(textItem.text)
+      try {
+        const parsed = JSON.parse(textItem.text)
+        if (Array.isArray(parsed.images)) {
+          for (const img of parsed.images) {
+            if (typeof img.data_url === 'string' && img.data_url.startsWith('data:')) {
+              images.push(img.data_url)
+            }
+          }
+        }
+      } catch {
+        if (textItem.text.startsWith('data:')) {
+          images.push(textItem.text)
+        }
+      }
     }
   }
 
