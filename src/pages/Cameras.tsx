@@ -127,7 +127,17 @@ export default function Cameras() {
               const status = statusMap[camera.did]
               const isConnected = status?.status === 'connected' || status?.status === 'streaming'
               const isConnecting = connecting === camera.did
+              const isReconnecting = status?.status === 'reconnecting' || status?.status === 'connecting'
+              const isError = status?.status === 'error'
               const cameraSnapshots = snapshots[camera.did] ?? []
+
+              const statusTag = isConnected ? (
+                <Tag color="blue" bordered={false}>流媒体中</Tag>
+              ) : isReconnecting ? (
+                <Tag color="orange" bordered={false}>连接中</Tag>
+              ) : isError ? (
+                <Tag color="red" bordered={false}>连接失败</Tag>
+              ) : null
 
               return (
                 <Col xs={24} lg={12} key={camera.did}>
@@ -137,9 +147,7 @@ export default function Cameras() {
                         <CameraOutlined />
                         <Text strong>{camera.name}</Text>
                         <StatusBadge online={camera.online} />
-                        {isConnected && (
-                          <Tag color="blue" bordered={false}>流媒体中</Tag>
-                        )}
+                        {statusTag}
                       </Space>
                     }
                   >
@@ -166,9 +174,8 @@ export default function Cameras() {
                           icon={<PlayCircleOutlined />}
                           onClick={() => connect(camera.did)}
                           loading={isConnecting}
-                          disabled={!camera.online}
                         >
-                          连接
+                          {!camera.online ? '尝试连接' : '连接'}
                         </Button>
                       ) : (
                         <Button

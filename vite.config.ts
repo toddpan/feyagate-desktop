@@ -42,11 +42,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/mcp': {
-        target: 'http://localhost:38080',
+        target: 'http://localhost:38090',
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:38080',
+        target: 'http://localhost:38090',
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: 'http://localhost:38090',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:38090',
         changeOrigin: true,
       },
       '/ota': {

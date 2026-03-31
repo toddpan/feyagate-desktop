@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
 let oauthWindow: BrowserWindow | null = null
 let wechatOAuthWindow: BrowserWindow | null = null
-let serverUrl = 'http://localhost:38080'
+let serverUrl = 'http://localhost:38090'
 let serverProcess: ChildProcess | null = null
-const DEFAULT_HTTP_PORT = 38080
+const DEFAULT_HTTP_PORT = 38090
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 
@@ -32,7 +32,27 @@ function getServerPaths() {
   return { binary, defaultConfig, userDataDir, userConfig, tokenFile }
 }
 
-function ensureUserConfig() {
+import net from 'node:net'
+
+function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const srv = net.createServer()
+    srv.once('error', () => resolve(false))
+    srv.listen(port, '127.0.0.1', () => {
+      srv.close(() => resolve(true))
+    })
+  })
+}
+
+async function findFreePort(preferred: number, maxAttempts = 20): Promise<number> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = preferred + i
+    if (await isPortFree(port)) return port
+  }
+  return 0
+}
+
+async function ensureUserConfig(): Promise<string> {
   const { defaultConfig, userDataDir, userConfig } = getServerPaths()
 
   if (!fs.existsSync(userDataDir)) {
@@ -52,28 +72,41 @@ function ensureUserConfig() {
   fs.writeFileSync(userConfig, cfg, 'utf-8')
 
   const portMatch = cfg.match(/http_port:\s*(\d+)/)
-  const port = portMatch ? parseInt(portMatch[1], 10) : DEFAULT_HTTP_PORT
-  serverUrl = `http://localhost:${port}`
-  console.log(`[MCP Server] Detected port from config: ${port}`)
+  const configuredPort = portMatch ? parseInt(portMatch[1], 10) : DEFAULT_HTTP_PORT
+  const freePort = await findFreePort(configuredPort)
 
-  return userConfig
+  let launchConfig = userConfig
+  if (freePort === 0) {
+    console.error('[MCP Server] No free port found starting from', configuredPort)
+  } else if (freePort !== configuredPort) {
+    console.log(`[MCP Server] Port ${configuredPort} busy, using ${freePort}`)
+    const runtimeCfg = cfg.replace(/http_port:\s*\d+/, `http_port: ${freePort}`)
+    const runtimeConfig = path.join(userDataDir, 'config.runtime.yaml')
+    fs.writeFileSync(runtimeConfig, runtimeCfg, 'utf-8')
+    launchConfig = runtimeConfig
+  }
+
+  const port = freePort || configuredPort
+  serverUrl = `http://localhost:${port}`
+  console.log(`[MCP Server] Using port: ${port}`)
+
+  return launchConfig
 }
 
-function startServer(): Promise<boolean> {
+async function startServer(): Promise<boolean> {
+  const { binary } = getServerPaths()
+
+  if (!fs.existsSync(binary)) {
+    console.error('[MCP Server] Binary not found:', binary)
+    return false
+  }
+
+  const configPath = await ensureUserConfig()
+
+  console.log('[MCP Server] Starting:', binary)
+  console.log('[MCP Server] Config:', configPath)
+
   return new Promise((resolve) => {
-    const { binary } = getServerPaths()
-
-    if (!fs.existsSync(binary)) {
-      console.error('[MCP Server] Binary not found:', binary)
-      resolve(false)
-      return
-    }
-
-    const configPath = ensureUserConfig()
-
-    console.log('[MCP Server] Starting:', binary)
-    console.log('[MCP Server] Config:', configPath)
-
     serverProcess = spawn(binary, ['--config', configPath], {
       cwd: path.dirname(configPath),
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -90,6 +123,16 @@ function startServer(): Promise<boolean> {
     serverProcess.on('exit', (code, signal) => {
       console.log(`[MCP Server] Exited: code=${code} signal=${signal}`)
       serverProcess = null
+      if (code !== 0 && code !== null && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
+        console.log('[MCP Server] Unexpected exit, restarting in 2s...')
+        setTimeout(() => {
+          startServer().then((ok) => {
+            if (ok && mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('server-ready')
+            }
+          })
+        }, 2000)
+      }
     })
 
     serverProcess.on('error', (err) => {

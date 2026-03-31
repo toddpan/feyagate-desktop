@@ -52,7 +52,11 @@ export const useCameraStore = create<CameraState>((set, get) => ({
   connect: async (cameraId: string) => {
     set({ connecting: cameraId, error: null })
     try {
-      await mcp.connectCamera(cameraId)
+      const result = await mcp.connectCamera(cameraId) as Record<string, unknown>
+      if (result?.error) {
+        set({ connecting: null, error: String(result.error) })
+        return
+      }
       set({ connecting: null })
       await get().fetchStatus(cameraId)
     } catch (e) {
