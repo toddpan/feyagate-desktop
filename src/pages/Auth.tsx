@@ -28,6 +28,7 @@ import {
   KeyOutlined,
   CloudSyncOutlined,
   InfoCircleOutlined,
+  CopyOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../stores/authStore'
 import * as mcp from '../services/mcp-client'
@@ -78,24 +79,42 @@ export default function Auth() {
   const [showManualAuth, setShowManualAuth] = useState(false)
   const [manualUrlInput, setManualUrlInput] = useState('')
   const [submittingCode, setSubmittingCode] = useState(false)
+  const [oauthPending, setOauthPending] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const popupRef = useRef<Window | null>(null)
+  const prevAuthorizedRef = useRef(authorized && remainingSeconds > 0)
 
   useEffect(() => {
     if (serverOnline) fetchStatus()
   }, [serverOnline, fetchStatus])
 
+  // Check URL params for auth result (after server redirect)
   useEffect(() => {
-    // Fallback: renderer receives raw code and calls auth/callback itself
+    const hash = window.location.hash
+    if (hash.includes('auth=success')) {
+      fetchStatus()
+      setShowManualAuth(false)
+      setOauthPending(false)
+      message.success('授权成功！')
+      window.location.hash = '#/'
+    } else if (hash.includes('auth=failed')) {
+      message.error('授权失败，请重试')
+      window.location.hash = '#/'
+    }
+  }, [fetchStatus])
+
+  useEffect(() => {
     mcp.onAuthCode(async (code) => {
       await handleCallback(code)
       setShowManualAuth(false)
+      setOauthPending(false)
       message.success('授权成功！')
     })
 
-    // Primary: main process already called auth/callback, just refresh UI
     if (window.feyagate?.onAuthSuccess) {
       window.feyagate.onAuthSuccess(() => {
         setShowManualAuth(false)
+        setOauthPending(false)
         fetchStatus()
         message.success('授权成功！')
       })
@@ -106,22 +125,30 @@ export default function Auth() {
     mcp.getServerUrl().then(setServerUrlInput)
   }, [])
 
-  // In browser mode, poll auth status after opening OAuth
+  // Poll auth status — only trigger success when transitioning to valid auth
   const startBrowserPoll = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current)
+    prevAuthorizedRef.current = false
     pollRef.current = setInterval(async () => {
       try {
         const status = await mcp.getAuthStatus()
-        if (status.authorized) {
+        if (status.authorized && status.remaining_seconds > 0 && !prevAuthorizedRef.current) {
+          prevAuthorizedRef.current = true
           clearInterval(pollRef.current)
           setShowManualAuth(false)
+          setOauthPending(false)
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close()
+          }
           fetchStatus()
           message.success('授权成功！')
         }
       } catch { /* ignore */ }
     }, 3000)
 
-    setTimeout(() => clearInterval(pollRef.current), 120000)
+    setTimeout(() => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }, 300000)
   }, [fetchStatus])
 
   useEffect(() => () => {
@@ -132,9 +159,47 @@ export default function Auth() {
     if (isElectron) {
       await startOAuth()
     } else {
-      await startOAuth()
-      setShowManualAuth(true)
-      startBrowserPoll()
+      try {
+        const url = await mcp.getAuthUrl()
+        const serverUrl = await mcp.getServerUrl()
+        const callbackBase = serverUrl || window.location.origin
+
+        // Try server-side browser OAuth flow first (requires updated server)
+        // Falls back to direct popup if /auth/browser-start is not available
+        let popup: Window | null = null
+        try {
+          const testResp = await fetch(`${callbackBase}/auth/browser-start`, {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(2000),
+          })
+          if (testResp.ok || testResp.status === 200) {
+            popup = window.open(
+              `${callbackBase}/auth/browser-start?callback=${encodeURIComponent(callbackBase + '/auth/callback')}&oauth_url=${encodeURIComponent(url)}`,
+              'xiaomi_oauth',
+              'width=520,height=700,popup=true,scrollbars=yes'
+            )
+          }
+        } catch { /* endpoint not available, use fallback */ }
+
+        if (!popup || popup.closed) {
+          popup = window.open(url, 'xiaomi_oauth', 'width=520,height=700,popup=true,scrollbars=yes')
+        }
+
+        popupRef.current = popup
+        setShowManualAuth(true)
+        setOauthPending(true)
+        startBrowserPoll()
+
+        // Monitor popup close
+        const checkClosed = setInterval(() => {
+          if (popup && popup.closed) {
+            clearInterval(checkClosed)
+          }
+        }, 1000)
+        setTimeout(() => clearInterval(checkClosed), 300000)
+      } catch (e) {
+        message.error(`启动授权失败: ${e}`)
+      }
     }
   }, [startOAuth, startBrowserPoll])
 
@@ -148,12 +213,45 @@ export default function Auth() {
     try {
       await handleCallback(code)
       setShowManualAuth(false)
+      setOauthPending(false)
       setManualUrlInput('')
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close()
+      }
       message.success('授权成功！')
     } catch (e) {
       message.error(`授权失败: ${e}`)
     } finally {
       setSubmittingCode(false)
+    }
+  }
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) {
+        setManualUrlInput(text)
+        const code = extractCodeFromUrl(text)
+        if (code) {
+          setSubmittingCode(true)
+          try {
+            await handleCallback(code)
+            setShowManualAuth(false)
+            setOauthPending(false)
+            setManualUrlInput('')
+            if (popupRef.current && !popupRef.current.closed) {
+              popupRef.current.close()
+            }
+            message.success('授权成功！')
+          } catch (e) {
+            message.error(`授权失败: ${e}`)
+          } finally {
+            setSubmittingCode(false)
+          }
+        }
+      }
+    } catch {
+      message.info('请手动粘贴地址到输入框')
     }
   }
 
@@ -314,8 +412,10 @@ export default function Auth() {
               submitting={submittingCode}
               onCancel={() => {
                 setShowManualAuth(false)
+                setOauthPending(false)
                 if (pollRef.current) clearInterval(pollRef.current)
               }}
+              onPaste={handlePasteFromClipboard}
             />
           ) : (
             <Space direction="vertical" size="middle" style={{ width: '100%', textAlign: 'center' }}>
@@ -351,20 +451,22 @@ function ManualAuthSection({
   setUrlInput,
   submitting,
   onCancel,
+  onPaste,
 }: {
   onSubmit: () => void
   urlInput: string
   setUrlInput: (v: string) => void
   submitting: boolean
   onCancel: () => void
+  onPaste: () => void
 }) {
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <Alert
         type="info"
         showIcon
-        message="浏览器模式 — 需要手动完成授权"
-        description="小米登录页面已在新标签页打开。登录后页面会跳转到一个无法访问的地址，这是正常的。请按下面的步骤完成授权。"
+        message="浏览器模式授权"
+        description="小米登录页面已在弹窗中打开。如果弹窗被浏览器拦截，请允许弹窗后重试。"
       />
 
       <Steps
@@ -373,36 +475,55 @@ function ManualAuthSection({
         current={1}
         items={[
           {
-            title: '小米登录',
-            description: '在新打开的标签页中完成小米账号登录',
+            title: '在弹窗中登录小米账号',
+            description: '点击"确认授权"完成小米账号登录',
             status: 'finish',
           },
           {
-            title: '复制重定向地址',
+            title: '复制错误页面的地址',
             description: (
               <Space direction="vertical" size={4}>
-                <Text>登录成功后，页面会跳转并显示"无法访问此网站"。</Text>
-                <Text strong>请复制浏览器地址栏中的完整 URL</Text>
-                <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                  地址格式类似: <Text code>https://127.0.0.1/?code=xxxxxxxx</Text>
-                </Paragraph>
+                <Text>授权后弹窗会显示 <Text strong>"无法访问此网站"</Text> — 这是正常的！</Text>
+                <Text type="danger" strong>请复制弹窗地址栏中的完整 URL，然后点击下方按钮粘贴</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  地址类似: <Text code>https://127.0.0.1/?code=xxxxxxxx</Text>
+                </Text>
               </Space>
             ),
             status: 'process',
           },
           {
-            title: '粘贴完成授权',
-            description: '将复制的地址粘贴到下方输入框',
+            title: '完成授权',
+            description: '系统自动提取授权码并完成登录',
             status: 'wait',
           },
         ]}
       />
 
-      <Card size="small" style={{ background: '#fafafa' }}>
+      <Card
+        size="small"
+        style={{
+          background: 'linear-gradient(135deg, #fff7e6 0%, #fff1f0 100%)',
+          border: '2px solid #fa8c16',
+        }}
+      >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Text strong><KeyOutlined /> 粘贴重定向 URL 或授权码：</Text>
+          <Button
+            type="primary"
+            size="large"
+            icon={<CopyOutlined />}
+            onClick={onPaste}
+            loading={submitting}
+            block
+            style={{ height: 48, fontSize: 16 }}
+          >
+            一键粘贴地址并授权
+          </Button>
+
+          <Divider plain style={{ margin: '4px 0', fontSize: 12 }}>或手动输入</Divider>
+
           <Input.TextArea
-            placeholder="粘贴完整的 https://127.0.0.1/?code=xxx 地址，或直接输入授权码"
+            placeholder="粘贴 https://127.0.0.1/?code=xxx 完整地址，或直接输入授权码"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             autoSize={{ minRows: 2, maxRows: 4 }}
@@ -424,9 +545,9 @@ function ManualAuthSection({
       </Card>
 
       <Alert
-        type="warning"
+        type="success"
         showIcon
-        message="系统也在自动检测授权状态，如果服务端已收到授权码，页面会自动跳转。"
+        message="系统也在自动检测授权状态，如果授权已完成会自动跳转。"
       />
     </Space>
   )

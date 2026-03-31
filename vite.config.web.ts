@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const MCP_SERVER = process.env.MCP_SERVER || 'http://localhost:38080'
+
 export default defineConfig({
   plugins: [react()],
   base: './',
@@ -10,17 +12,22 @@ export default defineConfig({
   },
   server: {
     port: 5174,
+    host: true,
     proxy: {
       '/mcp': {
-        target: 'http://localhost:38080',
+        target: MCP_SERVER,
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:38080',
+        target: MCP_SERVER,
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:38080',
+        target: MCP_SERVER,
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: MCP_SERVER,
         changeOrigin: true,
       },
       '/ota': {
