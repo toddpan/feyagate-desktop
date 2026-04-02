@@ -499,3 +499,277 @@ export function getClientPlatform(): string {
 export function isCameraSupported(): boolean {
   return getClientPlatform() !== 'win32'
 }
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+
+export interface TokenSummary {
+  today_tokens: number
+  today_calls: number
+  month_tokens: number
+  total_tokens: number
+  total_calls: number
+  total_failures: number
+  estimated_total_cost: number
+}
+
+export interface DailyTokenStat {
+  date: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  calls: number
+  failures: number
+  estimated_cost: number
+}
+
+export interface ModelTokenStat {
+  model: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  calls: number
+  estimated_cost: number
+}
+
+export interface SourceTokenStat {
+  source: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  calls: number
+}
+
+export interface TokenUsageResult {
+  summary: TokenSummary
+  daily: DailyTokenStat[]
+  by_model: ModelTokenStat[]
+  by_source: SourceTokenStat[]
+}
+
+export interface TokenRecordItem {
+  id: string
+  timestamp: string
+  source: string
+  model: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  success: boolean
+  rule_id: string
+  camera_id: string
+}
+
+export interface TriggerDailyStat {
+  date: string
+  count: number
+}
+
+export interface TriggerRuleStat {
+  rule_id: string
+  rule_name: string
+  count: number
+}
+
+export interface TriggerCameraStat {
+  camera_id: string
+  count: number
+}
+
+export interface TriggerHeatmapItem {
+  weekday: string
+  weekday_idx: number
+  hour: number
+  count: number
+}
+
+export interface TriggerSummaryResult {
+  overview: {
+    today: number
+    this_week: number
+    total: number
+    enabled_rules: number
+    total_rules: number
+  }
+  daily: TriggerDailyStat[]
+  by_rule: TriggerRuleStat[]
+  by_camera: TriggerCameraStat[]
+  heatmap: TriggerHeatmapItem[]
+}
+
+export interface DashboardResult {
+  trigger_engine: { enabled: boolean; enabled_rules: number; total_rules: number }
+  today: { ai_calls: number; triggers: number; actions_executed: number; tokens_used: number }
+  token_summary: TokenSummary
+  action_ranking: Array<{ action: string; count: number }>
+  recent_events: Array<{ time: string; rule_name: string; camera_id: string }>
+}
+
+export async function getTokenUsage(days = 30): Promise<TokenUsageResult> {
+  return callTool<TokenUsageResult>('stats/token_usage', { days })
+}
+
+export async function getTokenRecords(limit = 50): Promise<{ records: TokenRecordItem[] }> {
+  return callTool<{ records: TokenRecordItem[] }>('stats/token_records', { limit })
+}
+
+export async function getTriggerSummary(days = 30): Promise<TriggerSummaryResult> {
+  return callTool<TriggerSummaryResult>('stats/trigger_summary', { days })
+}
+
+export async function getDashboard(): Promise<DashboardResult> {
+  return callTool<DashboardResult>('stats/dashboard')
+}
+
+// ── Vision AI Config ─────────────────────────────────────────────────────────
+
+export interface VisionConfigResult {
+  enabled: boolean
+  api_key_masked: string
+  has_api_key: boolean
+  base_url: string
+  model: string
+  temperature: number
+  max_tokens: number
+  timeout_seconds: number
+}
+
+export interface VisionConfigUpdate {
+  enabled?: boolean
+  api_key?: string
+  base_url?: string
+  model?: string
+  temperature?: number
+  max_tokens?: number
+  timeout_seconds?: number
+}
+
+export interface VisionConfigSaveResult extends VisionConfigResult {
+  success: boolean
+  config_saved: boolean
+  message: string
+}
+
+export async function getVisionConfig(): Promise<VisionConfigResult> {
+  return callTool<VisionConfigResult>('config/get_vision')
+}
+
+export async function setVisionConfig(updates: VisionConfigUpdate): Promise<VisionConfigSaveResult> {
+  return callTool<VisionConfigSaveResult>('config/set_vision', updates as Record<string, unknown>)
+}
+
+// ── Vision AI Chat ───────────────────────────────────────────────────────────
+
+export interface VisionChatResult {
+  camera_id: string
+  camera_name: string
+  channel: number
+  content?: string
+  error?: string
+  images_used: number
+  model: string
+  tokens?: { prompt: number; completion: number }
+}
+
+export async function visionChat(
+  cameraId: string,
+  query: string,
+  count = 3,
+  channel = 0,
+): Promise<VisionChatResult> {
+  return callTool<VisionChatResult>('camera/vision_chat', {
+    camera_id: cameraId,
+    query,
+    count,
+    channel,
+  })
+}
+
+// ── Trigger Config ───────────────────────────────────────────────────────────
+
+export interface TriggerConfigResult {
+  enabled: boolean
+  interval_seconds: number
+  vision_img_count: number
+  motion_threshold: number
+  log_ttl_days: number
+  min_trigger_interval: number
+}
+
+export interface TriggerConfigUpdate {
+  enabled?: boolean
+  interval_seconds?: number
+  vision_img_count?: number
+  motion_threshold?: number
+  log_ttl_days?: number
+  min_trigger_interval?: number
+}
+
+export interface TriggerConfigSaveResult extends TriggerConfigResult {
+  success: boolean
+  config_saved: boolean
+  message: string
+}
+
+export async function getTriggerConfig(): Promise<TriggerConfigResult> {
+  return callTool<TriggerConfigResult>('config/get_trigger')
+}
+
+export async function setTriggerConfig(updates: TriggerConfigUpdate): Promise<TriggerConfigSaveResult> {
+  return callTool<TriggerConfigSaveResult>('config/set_trigger', updates as Record<string, unknown>)
+}
+
+// ── Trigger Rules ────────────────────────────────────────────────────────────
+
+export interface TriggerAction {
+  tool_name: string
+  arguments: Record<string, unknown>
+}
+
+export interface TriggerRule {
+  id: string
+  enabled: boolean
+  name: string
+  cameras: string[]
+  condition: string
+  actions?: TriggerAction[]
+  notify?: { title?: string; body?: string }
+  filter?: { interval?: number; period?: string }
+}
+
+export interface TriggerLog {
+  id: string
+  rule_id: string
+  rule_name: string
+  camera_id: string
+  channel: number
+  triggered_at: string
+  condition: string
+  llm_response: string
+  actions_executed: string[]
+}
+
+export async function triggerCreate(rule: Partial<TriggerRule>): Promise<{ id: string; rule: TriggerRule }> {
+  return callTool<{ id: string; rule: TriggerRule }>('trigger/create', rule as Record<string, unknown>)
+}
+
+export async function triggerList(): Promise<{ rules: TriggerRule[]; count: number }> {
+  return callTool<{ rules: TriggerRule[]; count: number }>('trigger/list')
+}
+
+export async function triggerUpdate(id: string, updates: Partial<TriggerRule>): Promise<{ rule: TriggerRule }> {
+  return callTool<{ rule: TriggerRule }>('trigger/update', { id, ...updates } as Record<string, unknown>)
+}
+
+export async function triggerDelete(id: string): Promise<{ message: string }> {
+  return callTool<{ message: string }>('trigger/delete', { id })
+}
+
+export async function triggerToggle(id: string, enabled: boolean): Promise<{ rule: TriggerRule }> {
+  return callTool<{ rule: TriggerRule }>('trigger/toggle', { id, enabled })
+}
+
+export async function triggerLogs(limit = 50, ruleId?: string): Promise<{ logs: TriggerLog[] }> {
+  const args: Record<string, unknown> = { limit }
+  if (ruleId) args.rule_id = ruleId
+  return callTool<{ logs: TriggerLog[] }>('trigger/logs', args)
+}

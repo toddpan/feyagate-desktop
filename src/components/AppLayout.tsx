@@ -11,6 +11,12 @@ import {
   ThunderboltOutlined,
   SafetyCertificateOutlined,
   WechatOutlined,
+  EyeOutlined,
+  AlertOutlined,
+  HistoryOutlined,
+  DashboardOutlined,
+  DollarOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
@@ -26,6 +32,9 @@ const cameraSupported = isCameraSupported()
 
 const menuItems = [
   { key: '/', icon: <LoginOutlined />, label: '授权登录' },
+  { key: '/dashboard', icon: <DashboardOutlined />, label: '数据看板' },
+  { key: '/stats/tokens', icon: <DollarOutlined />, label: 'Token 统计' },
+  { key: '/stats/triggers', icon: <BarChartOutlined />, label: '触发统计' },
   { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
   { key: '/control', icon: <ControlOutlined />, label: '设备控制' },
   {
@@ -39,6 +48,9 @@ const menuItems = [
           </Tooltip>
         ),
   },
+  { key: '/vision', icon: <EyeOutlined />, label: 'Vision AI' },
+  { key: '/triggers', icon: <AlertOutlined />, label: '触发规则' },
+  { key: '/trigger-logs', icon: <HistoryOutlined />, label: '触发日志' },
   { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
   { key: '/license', icon: <SafetyCertificateOutlined />, label: '设备授权' },
   // { key: '/wechat', icon: <WechatOutlined />, label: '微信登录' },
