@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   Card, Typography, Space, Spin, Alert, Divider, Input, Select, Button,
   message, Tag, Descriptions, Empty, Switch, Form, InputNumber, Collapse,
+  Modal, List, Popconfirm,
 } from 'antd'
 import {
   EyeOutlined, CameraOutlined, SendOutlined, RobotOutlined,
-  SettingOutlined, SaveOutlined, ApiOutlined,
+  SettingOutlined, SaveOutlined, ApiOutlined, PlusOutlined, DeleteOutlined,
 } from '@ant-design/icons'
 import {
   visionChat, VisionChatResult, getCameraList, CameraListResult,
@@ -16,15 +17,42 @@ import { useAuthStore } from '../stores/authStore'
 const { Title, Text, Paragraph } = Typography
 const { TextArea } = Input
 
-const MODEL_PRESETS = [
+interface ModelPreset {
+  label: string
+  value: string
+  base_url: string
+  custom?: boolean
+}
+
+const BUILTIN_PRESETS: ModelPreset[] = [
   { label: 'Qwen VL Max (通义千问)', value: 'qwen-vl-max', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   { label: 'Qwen VL Plus (通义千问)', value: 'qwen-vl-plus', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   { label: 'GPT-4o (OpenAI)', value: 'gpt-4o', base_url: 'https://api.openai.com/v1' },
   { label: 'GPT-4o Mini (OpenAI)', value: 'gpt-4o-mini', base_url: 'https://api.openai.com/v1' },
+  { label: 'MiniMax-VL-01 (MiniMax)', value: 'MiniMax-VL-01', base_url: 'https://api.minimax.io/v1' },
+  { label: 'MiniMax-M2.7 (MiniMax)', value: 'MiniMax-M2.7', base_url: 'https://api.minimax.io/v1' },
   { label: 'Doubao Vision Pro (豆包)', value: 'doubao-vision-pro-32k', base_url: 'https://ark.cn-beijing.volces.com/api/v3' },
   { label: 'LLaVA 13B (Ollama 本地)', value: 'llava:13b', base_url: 'http://localhost:11434/v1' },
   { label: 'LLaVA 7B (Ollama 本地)', value: 'llava:7b', base_url: 'http://localhost:11434/v1' },
 ]
+
+const CUSTOM_MODELS_KEY = 'feyagate_custom_vlm_models'
+
+function loadCustomModels(): ModelPreset[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_MODELS_KEY)
+    if (!raw) return []
+    return JSON.parse(raw).map((m: any) => ({ ...m, custom: true }))
+  } catch {
+    return []
+  }
+}
+
+function saveCustomModels(models: ModelPreset[]) {
+  localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(
+    models.map(({ label, value, base_url }) => ({ label, value, base_url }))
+  ))
+}
 
 export default function VisionSettings() {
   const serverOnline = useAuthStore((s) => s.serverOnline)
@@ -41,6 +69,15 @@ export default function VisionSettings() {
   const [maxTokens, setMaxTokens] = useState(512)
   const [timeoutSeconds, setTimeoutSeconds] = useState(30)
   const [configDirty, setConfigDirty] = useState(false)
+
+  // Custom models
+  const [customModels, setCustomModels] = useState<ModelPreset[]>(() => loadCustomModels())
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [newModel, setNewModel] = useState('')
+  const [newBaseUrl, setNewBaseUrl] = useState('')
+
+  const allPresets = [...BUILTIN_PRESETS, ...customModels]
 
   // Chat state
   const [cameras, setCameras] = useState<CameraListResult | null>(null)
@@ -95,10 +132,46 @@ export default function VisionSettings() {
   }, [serverOnline, fetchConfig, fetchCameras])
 
   const handleModelPreset = (modelValue: string) => {
-    const preset = MODEL_PRESETS.find((p) => p.value === modelValue)
+    const preset = allPresets.find((p) => p.value === modelValue)
     setModel(modelValue)
     if (preset) setBaseUrl(preset.base_url)
     setConfigDirty(true)
+  }
+
+  const handleAddCustomModel = () => {
+    if (!newLabel.trim() || !newModel.trim() || !newBaseUrl.trim()) {
+      messageApi.warning('请填写完整的模型信息')
+      return
+    }
+    if (allPresets.find((p) => p.value === newModel.trim())) {
+      messageApi.warning('该模型 ID 已存在')
+      return
+    }
+    const newPreset: ModelPreset = {
+      label: newLabel.trim(),
+      value: newModel.trim(),
+      base_url: newBaseUrl.trim(),
+      custom: true,
+    }
+    const updated = [...customModels, newPreset]
+    setCustomModels(updated)
+    saveCustomModels(updated)
+    setAddModalOpen(false)
+    setNewLabel('')
+    setNewModel('')
+    setNewBaseUrl('')
+    messageApi.success('自定义模型已添加')
+
+    setModel(newPreset.value)
+    setBaseUrl(newPreset.base_url)
+    setConfigDirty(true)
+  }
+
+  const handleDeleteCustomModel = (modelValue: string) => {
+    const updated = customModels.filter((m) => m.value !== modelValue)
+    setCustomModels(updated)
+    saveCustomModels(updated)
+    messageApi.success('已删除')
   }
 
   const handleSaveConfig = async () => {
@@ -194,21 +267,58 @@ export default function VisionSettings() {
           <Form.Item
             label="模型预设"
             style={{ marginBottom: 12 }}
-            tooltip="选择预设会自动填充模型名称和 API 端点"
+            tooltip="选择预设会自动填充模型名称和 API 端点。支持所有 OpenAI 兼容接口。"
           >
-            <Select
-              placeholder="选择预设模型 (或手动填写)"
-              allowClear
-              value={MODEL_PRESETS.find((p) => p.value === model) ? model : undefined}
-              onChange={handleModelPreset}
-              options={MODEL_PRESETS.map((p) => ({ value: p.value, label: p.label }))}
-            />
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                placeholder="选择预设模型 (或手动填写下方字段)"
+                allowClear
+                style={{ flex: 1 }}
+                value={allPresets.find((p) => p.value === model) ? model : undefined}
+                onChange={handleModelPreset}
+                options={[
+                  {
+                    label: '内置模型',
+                    options: BUILTIN_PRESETS.map((p) => ({ value: p.value, label: p.label })),
+                  },
+                  ...(customModels.length > 0 ? [{
+                    label: '自定义模型',
+                    options: customModels.map((p) => ({
+                      value: p.value,
+                      label: `⭐ ${p.label}`,
+                    })),
+                  }] : []),
+                ]}
+              />
+              <Button icon={<PlusOutlined />} onClick={() => setAddModalOpen(true)}>
+                添加
+              </Button>
+            </Space.Compact>
           </Form.Item>
+
+          {/* Custom models list */}
+          {customModels.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>自定义模型：</Text>
+              <div style={{ marginTop: 4 }}>
+                {customModels.map((m) => (
+                  <Tag
+                    key={m.value}
+                    closable
+                    onClose={(e) => { e.preventDefault(); handleDeleteCustomModel(m.value) }}
+                    style={{ marginBottom: 4 }}
+                  >
+                    {m.label} ({m.value})
+                  </Tag>
+                ))}
+              </div>
+            </div>
+          )}
 
           <Form.Item label="模型名称" required style={{ marginBottom: 12 }}>
             <Input
               prefix={<RobotOutlined />}
-              placeholder="例如: qwen-vl-max, gpt-4o"
+              placeholder="例如: qwen-vl-max, gpt-4o, my-custom-model"
               value={model}
               onChange={(e) => { setModel(e.target.value); setConfigDirty(true) }}
             />
@@ -217,7 +327,7 @@ export default function VisionSettings() {
           <Form.Item label="API 端点 (Base URL)" required style={{ marginBottom: 12 }}>
             <Input
               prefix={<ApiOutlined />}
-              placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+              placeholder="https://your-api-endpoint.com/v1"
               value={baseUrl}
               onChange={(e) => { setBaseUrl(e.target.value); setConfigDirty(true) }}
             />
@@ -285,6 +395,49 @@ export default function VisionSettings() {
           </Button>
         </Form>
       </Card>
+
+      {/* Add Custom Model Modal */}
+      <Modal
+        title="添加自定义模型"
+        open={addModalOpen}
+        onOk={handleAddCustomModel}
+        onCancel={() => setAddModalOpen(false)}
+        okText="添加"
+        cancelText="取消"
+        width={480}
+      >
+        <Alert
+          type="info"
+          showIcon
+          message="支持所有兼容 OpenAI Chat Completions API 的视觉模型"
+          style={{ marginBottom: 16 }}
+        />
+        <Form layout="vertical" size="middle">
+          <Form.Item label="显示名称" required>
+            <Input
+              placeholder="例如: DeepSeek VL (自建)"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+            />
+          </Form.Item>
+          <Form.Item label="模型 ID" required tooltip="对应 API 请求中的 model 字段">
+            <Input
+              prefix={<RobotOutlined />}
+              placeholder="例如: deepseek-vl-7b"
+              value={newModel}
+              onChange={(e) => setNewModel(e.target.value)}
+            />
+          </Form.Item>
+          <Form.Item label="API 端点 (Base URL)" required tooltip="OpenAI 兼容接口的基础地址">
+            <Input
+              prefix={<ApiOutlined />}
+              placeholder="例如: https://your-api.com/v1"
+              value={newBaseUrl}
+              onChange={(e) => setNewBaseUrl(e.target.value)}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Chat Test Section */}
       <Card title={<Space><CameraOutlined /><span>摄像头画面问答</span></Space>}>

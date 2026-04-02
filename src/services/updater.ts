@@ -2,7 +2,7 @@ const FOTA_JSON_URL = 'https://your-ota-server.example.com/ota/fota.json'
 const FOTA_PROXY_PATH = '/ota/fota.json'
 const APP_FOTA_TYPE = 'feyagate-desktop'
 
-const CURRENT_VERSION = '1.0.0'
+const CURRENT_VERSION = '1.1.0'
 
 export interface UpdateInfo {
   version: string
