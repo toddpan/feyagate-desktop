@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, session } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -9,6 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let mainWindow: BrowserWindow | null = null
 let oauthWindow: BrowserWindow | null = null
 let wechatOAuthWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let isQuitting = false
 let serverUrl = 'http://localhost:38090'
 let serverProcess: ChildProcess | null = null
 const DEFAULT_HTTP_PORT = 38090
@@ -186,6 +188,112 @@ function stopServer() {
   }, 3000)
 }
 
+function getTrayIconPath(): string {
+  const isDev = !!VITE_DEV_SERVER_URL
+  const iconDir = isDev
+    ? path.resolve(__dirname, '../resources/icons')
+    : path.join(process.resourcesPath!, 'icons')
+
+  if (process.platform === 'darwin') {
+    return path.join(iconDir, 'trayTemplate.png')
+  }
+  return path.join(iconDir, 'tray-32.png')
+}
+
+function showMainWindow() {
+  if (process.platform === 'darwin') {
+    app.dock?.show()
+  }
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+  } else {
+    mainWindow.show()
+    mainWindow.focus()
+  }
+}
+
+function createTray() {
+  if (tray) return
+
+  const iconPath = getTrayIconPath()
+  const icon = nativeImage.createFromPath(iconPath)
+
+  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
+  tray.setToolTip('FeyaGate Desktop')
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示主窗口',
+      click: () => showMainWindow(),
+    },
+    { type: 'separator' },
+    {
+      label: serverProcess && !serverProcess.killed ? '✅ MCP 服务运行中' : '❌ MCP 服务已停止',
+      enabled: false,
+    },
+    {
+      label: '重启服务',
+      click: async () => {
+        stopServer()
+        await new Promise((r) => setTimeout(r, 1000))
+        const ok = await startServer()
+        if (ok && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('server-ready')
+        }
+        updateTrayMenu()
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      },
+    },
+  ])
+
+  tray.setContextMenu(contextMenu)
+
+  tray.on('double-click', () => showMainWindow())
+}
+
+function updateTrayMenu() {
+  if (!tray) return
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示主窗口',
+      click: () => showMainWindow(),
+    },
+    { type: 'separator' },
+    {
+      label: serverProcess && !serverProcess.killed ? '✅ MCP 服务运行中' : '❌ MCP 服务已停止',
+      enabled: false,
+    },
+    {
+      label: '重启服务',
+      click: async () => {
+        stopServer()
+        await new Promise((r) => setTimeout(r, 1000))
+        const ok = await startServer()
+        if (ok && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('server-ready')
+        }
+        updateTrayMenu()
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      },
+    },
+  ])
+  tray.setContextMenu(contextMenu)
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -206,6 +314,16 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
+
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+      if (process.platform === 'darwin') {
+        app.dock?.hide()
+      }
+    }
+  })
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -471,22 +589,28 @@ ipcMain.handle('restart-server', async () => {
 })
 
 app.whenReady().then(async () => {
+  createTray()
   createWindow()
   await startServer()
+  updateTrayMenu()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+    showMainWindow()
+    if (process.platform === 'darwin') {
+      app.dock?.show()
     }
   })
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // With tray support, don't quit when all windows are closed
 })
 
 app.on('before-quit', () => {
+  isQuitting = true
   stopServer()
+  if (tray) {
+    tray.destroy()
+    tray = null
+  }
 })

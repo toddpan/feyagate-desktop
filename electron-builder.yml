@@ -12,6 +12,10 @@ extraResources:
     to: server/
     filter:
       - "**/*"
+  - from: resources/icons/
+    to: icons/
+    filter:
+      - "**/*"
 mac:
   category: public.app-category.utilities
   target:
