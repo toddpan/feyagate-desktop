@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } from 'ele
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { spawn, ChildProcess } from 'node:child_process'
+import { spawn, ChildProcess, execSync } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -13,6 +13,7 @@ let tray: Tray | null = null
 let isQuitting = false
 let serverUrl = 'http://localhost:38090'
 let serverProcess: ChildProcess | null = null
+let serverStarting = false
 const DEFAULT_HTTP_PORT = 38090
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
@@ -31,7 +32,9 @@ function getServerPaths() {
   const userConfig = path.join(userDataDir, 'config.yaml')
   const tokenFile = path.join(userDataDir, 'auth_token.json')
 
-  return { binary, defaultConfig, userDataDir, userConfig, tokenFile }
+  const pidFile = path.join(userDataDir, 'server.pid')
+
+  return { binary, defaultConfig, userDataDir, userConfig, tokenFile, pidFile }
 }
 
 import net from 'node:net'
@@ -96,62 +99,87 @@ async function ensureUserConfig(): Promise<string> {
 }
 
 async function startServer(): Promise<boolean> {
-  const { binary } = getServerPaths()
-
-  if (!fs.existsSync(binary)) {
-    console.error('[MCP Server] Binary not found:', binary)
+  if (serverStarting) {
+    console.log('[MCP Server] Already starting, skipping duplicate call')
     return false
   }
+  if (serverProcess && !serverProcess.killed) {
+    console.log('[MCP Server] Already running (pid=' + serverProcess.pid + '), skipping')
+    return true
+  }
 
-  const configPath = await ensureUserConfig()
+  serverStarting = true
 
-  console.log('[MCP Server] Starting:', binary)
-  console.log('[MCP Server] Config:', configPath)
+  try {
+    killStaleServerProcesses()
 
-  return new Promise((resolve) => {
-    serverProcess = spawn(binary, ['--config', configPath], {
-      cwd: path.dirname(configPath),
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
+    const { binary } = getServerPaths()
 
-    serverProcess.stdout?.on('data', (data: Buffer) => {
-      console.log('[MCP Server]', data.toString().trimEnd())
-    })
+    if (!fs.existsSync(binary)) {
+      console.error('[MCP Server] Binary not found:', binary)
+      return false
+    }
 
-    serverProcess.stderr?.on('data', (data: Buffer) => {
-      console.error('[MCP Server]', data.toString().trimEnd())
-    })
+    const configPath = await ensureUserConfig()
 
-    serverProcess.on('exit', (code, signal) => {
-      console.log(`[MCP Server] Exited: code=${code} signal=${signal}`)
-      serverProcess = null
-      if (code !== 0 && code !== null && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
-        console.log('[MCP Server] Unexpected exit, restarting in 2s...')
-        setTimeout(() => {
-          startServer().then((ok) => {
-            if (ok && mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('server-ready')
-            }
-          })
-        }, 2000)
-      }
-    })
+    console.log('[MCP Server] Starting:', binary)
+    console.log('[MCP Server] Config:', configPath)
 
-    serverProcess.on('error', (err) => {
-      console.error('[MCP Server] Spawn error:', err.message)
-      serverProcess = null
-      resolve(false)
-    })
-
-    waitForServerReady()
-      .then((ok) => {
-        if (ok) {
-          console.log('[MCP Server] Server is ready')
-          notifyServerReady()
-        }
-        resolve(ok)
+    return await new Promise<boolean>((resolve) => {
+      serverProcess = spawn(binary, ['--config', configPath], {
+        cwd: path.dirname(configPath),
+        stdio: ['ignore', 'pipe', 'pipe'],
       })
-  })
+
+      if (serverProcess.pid) {
+        writePidFile(serverProcess.pid)
+        console.log(`[MCP Server] Spawned with pid=${serverProcess.pid}`)
+      }
+
+      serverProcess.stdout?.on('data', (data: Buffer) => {
+        console.log('[MCP Server]', data.toString().trimEnd())
+      })
+
+      serverProcess.stderr?.on('data', (data: Buffer) => {
+        console.error('[MCP Server]', data.toString().trimEnd())
+      })
+
+      serverProcess.on('exit', (code, signal) => {
+        console.log(`[MCP Server] Exited: code=${code} signal=${signal}`)
+        serverProcess = null
+        removePidFile()
+        if (!isQuitting && code !== 0 && code !== null && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
+          console.log('[MCP Server] Unexpected exit, restarting in 2s...')
+          setTimeout(() => {
+            startServer().then((ok) => {
+              if (ok && mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('server-ready')
+              }
+              updateTrayMenu()
+            })
+          }, 2000)
+        }
+      })
+
+      serverProcess.on('error', (err) => {
+        console.error('[MCP Server] Spawn error:', err.message)
+        serverProcess = null
+        removePidFile()
+        resolve(false)
+      })
+
+      waitForServerReady()
+        .then((ok) => {
+          if (ok) {
+            console.log('[MCP Server] Server is ready')
+            notifyServerReady()
+          }
+          resolve(ok)
+        })
+    })
+  } finally {
+    serverStarting = false
+  }
 }
 
 function notifyServerReady() {
@@ -177,15 +205,131 @@ async function waitForServerReady(maxRetries = 30, intervalMs = 500): Promise<bo
   return false
 }
 
-function stopServer() {
-  if (!serverProcess) return
-  console.log('[MCP Server] Stopping...')
-  serverProcess.kill('SIGTERM')
-  setTimeout(() => {
-    if (serverProcess && !serverProcess.killed) {
-      serverProcess.kill('SIGKILL')
+function writePidFile(pid: number) {
+  try {
+    const { pidFile } = getServerPaths()
+    fs.writeFileSync(pidFile, String(pid), 'utf-8')
+  } catch (err) {
+    console.error('[MCP Server] Failed to write PID file:', err)
+  }
+}
+
+function removePidFile() {
+  try {
+    const { pidFile } = getServerPaths()
+    if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile)
+  } catch { /* ignore */ }
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function killProcess(pid: number) {
+  try {
+    if (process.platform === 'win32') {
+      execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' })
+    } else {
+      process.kill(pid, 'SIGTERM')
+      setTimeout(() => {
+        if (isProcessAlive(pid)) {
+          try { process.kill(pid, 'SIGKILL') } catch { /* already dead */ }
+        }
+      }, 2000)
     }
-  }, 3000)
+  } catch { /* already dead */ }
+}
+
+function killStaleServerProcesses() {
+  const { pidFile, binary } = getServerPaths()
+  const binaryName = path.basename(binary)
+
+  // 1) Check PID file for leftover process from previous session
+  if (fs.existsSync(pidFile)) {
+    try {
+      const oldPid = parseInt(fs.readFileSync(pidFile, 'utf-8').trim(), 10)
+      if (oldPid && isProcessAlive(oldPid)) {
+        console.log(`[MCP Server] Killing stale process from PID file: ${oldPid}`)
+        killProcess(oldPid)
+      }
+    } catch { /* ignore */ }
+    removePidFile()
+  }
+
+  // 2) Scan for any orphaned miloco-mcp-server processes by name
+  try {
+    if (process.platform === 'win32') {
+      const list = execSync(`tasklist /FI "IMAGENAME eq ${binaryName}.exe" /FO CSV /NH`, { encoding: 'utf-8' })
+      for (const line of list.split('\n')) {
+        const match = line.match(/"[^"]+","(\d+)"/)
+        if (match) {
+          const pid = parseInt(match[1], 10)
+          console.log(`[MCP Server] Killing orphaned process (Windows): ${pid}`)
+          killProcess(pid)
+        }
+      }
+    } else {
+      const pids = execSync(`pgrep -f "${binaryName}" 2>/dev/null || true`, { encoding: 'utf-8' }).trim()
+      if (pids) {
+        for (const pidStr of pids.split('\n')) {
+          const pid = parseInt(pidStr.trim(), 10)
+          if (pid && pid !== process.pid && isProcessAlive(pid)) {
+            console.log(`[MCP Server] Killing orphaned process: ${pid}`)
+            killProcess(pid)
+          }
+        }
+      }
+    }
+  } catch { /* pgrep/tasklist not available */ }
+}
+
+function stopServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!serverProcess) {
+      removePidFile()
+      resolve()
+      return
+    }
+    console.log('[MCP Server] Stopping...')
+    const pid = serverProcess.pid
+
+    const forceKillTimer = setTimeout(() => {
+      if (serverProcess && !serverProcess.killed) {
+        console.log('[MCP Server] Force killing...')
+        serverProcess.kill('SIGKILL')
+      }
+    }, 3000)
+
+    const exitHandler = () => {
+      clearTimeout(forceKillTimer)
+      serverProcess = null
+      removePidFile()
+      resolve()
+    }
+
+    if (serverProcess.exitCode !== null) {
+      exitHandler()
+      return
+    }
+
+    serverProcess.once('exit', exitHandler)
+    serverProcess.kill('SIGTERM')
+
+    // Safety timeout: resolve even if exit event never fires
+    setTimeout(() => {
+      if (pid && isProcessAlive(pid)) {
+        try { process.kill(pid, 'SIGKILL') } catch { /* */ }
+      }
+      serverProcess = null
+      removePidFile()
+      resolve()
+    }, 5000)
+  })
 }
 
 function getTrayIconPath(): string {
@@ -234,8 +378,7 @@ function createTray() {
     {
       label: '重启服务',
       click: async () => {
-        stopServer()
-        await new Promise((r) => setTimeout(r, 1000))
+        await stopServer()
         const ok = await startServer()
         if (ok && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('server-ready')
@@ -273,8 +416,7 @@ function updateTrayMenu() {
     {
       label: '重启服务',
       click: async () => {
-        stopServer()
-        await new Promise((r) => setTimeout(r, 1000))
+        await stopServer()
         const ok = await startServer()
         if (ok && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('server-ready')
@@ -583,8 +725,7 @@ ipcMain.handle('server-status', async () => {
 })
 
 ipcMain.handle('restart-server', async () => {
-  stopServer()
-  await new Promise((r) => setTimeout(r, 1000))
+  await stopServer()
   return startServer()
 })
 
