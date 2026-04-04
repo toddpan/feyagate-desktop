@@ -7,10 +7,11 @@ import {
 import {
   PlusOutlined, DeleteOutlined, EditOutlined, ThunderboltOutlined,
   SyncOutlined, VideoCameraOutlined, SettingOutlined, SaveOutlined,
+  MinusCircleOutlined,
 } from '@ant-design/icons'
 import {
   triggerList, triggerCreate, triggerUpdate, triggerDelete, triggerToggle,
-  getCameraList, TriggerRule, CameraListResult,
+  getCameraList, TriggerRule, TriggerAction, CameraListResult,
   getTriggerConfig, setTriggerConfig, TriggerConfigResult, TriggerConfigUpdate,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
@@ -142,11 +143,16 @@ export default function TriggerRules() {
 
   const openEdit = (rule: TriggerRule) => {
     setEditingRule(rule)
+    const actionsForForm = (rule.actions ?? []).map((a: TriggerAction) => ({
+      tool_name: a.tool_name,
+      arguments: JSON.stringify(a.arguments ?? {}),
+    }))
     form.setFieldsValue({
       name: rule.name,
       cameras: rule.cameras,
       condition: rule.condition,
       interval: rule.filter?.interval,
+      actions: actionsForForm.length > 0 ? actionsForForm : undefined,
     })
     setModalOpen(true)
   }
@@ -162,6 +168,16 @@ export default function TriggerRules() {
       }
       if (values.interval) {
         payload.filter = { interval: values.interval }
+      }
+      const formActions = values.actions as Array<{ tool_name: string; arguments: string }> | undefined
+      if (formActions && formActions.length > 0) {
+        payload.actions = formActions.map((a) => {
+          let args: Record<string, unknown> = {}
+          try { args = JSON.parse(a.arguments || '{}') } catch { /* keep empty */ }
+          return { tool_name: a.tool_name, arguments: args }
+        })
+      } else {
+        payload.actions = []
       }
       if (editingRule) {
         await triggerUpdate(editingRule.id, payload)
@@ -363,6 +379,18 @@ export default function TriggerRules() {
                         摄像头: {rule.cameras?.join(', ')}
                         {rule.filter?.interval ? ` | 间隔: ${rule.filter.interval}秒` : ''}
                       </Text>
+                      {rule.actions && rule.actions.length > 0 ? (
+                        <Space size={4} wrap>
+                          <Text type="secondary">动作:</Text>
+                          {rule.actions.map((a: TriggerAction, i: number) => (
+                            <Tag key={i} color="blue">{a.tool_name}</Tag>
+                          ))}
+                        </Space>
+                      ) : (
+                        <Text type="warning" style={{ color: '#fa8c16' }}>
+                          ⚠ 未配置执行动作
+                        </Text>
+                      )}
                     </Space>
                   }
                 />
@@ -419,6 +447,61 @@ export default function TriggerRules() {
               placeholder={'例如: 检测到有人进入客厅\n猫咪跳上了餐桌\n深夜有陌生人在窗外'}
             />
           </Form.Item>
+
+          <Divider orientation="left" plain>触发后执行的动作</Divider>
+
+          <Form.List name="actions">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }) => (
+                  <Card
+                    key={key}
+                    size="small"
+                    style={{ marginBottom: 8, background: '#fafafa' }}
+                    extra={
+                      <MinusCircleOutlined
+                        style={{ color: '#ff4d4f', cursor: 'pointer' }}
+                        onClick={() => remove(name)}
+                      />
+                    }
+                    title={<Text type="secondary">动作 {name + 1}</Text>}
+                  >
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'tool_name']}
+                      label="MCP 工具名"
+                      rules={[{ required: true, message: '请输入工具名' }]}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <Input placeholder="如: xiaomi/send_ctrl_rpc, tuya/control" />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'arguments']}
+                      label="参数 (JSON)"
+                      rules={[{ required: true, message: '请输入参数' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Input.TextArea
+                        rows={2}
+                        placeholder={'如: {"device_id":"534345813","iid":"prop.device.2.1","value":true}'}
+                      />
+                    </Form.Item>
+                  </Card>
+                ))}
+                <Form.Item style={{ marginBottom: 12 }}>
+                  <Button
+                    type="dashed"
+                    onClick={() => add()}
+                    block
+                    icon={<PlusOutlined />}
+                  >
+                    添加执行动作
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+          </Form.List>
 
           <Form.Item name="interval" label="最小触发间隔（秒）">
             <InputNumber min={5} max={3600} placeholder="60" style={{ width: '100%' }} />
