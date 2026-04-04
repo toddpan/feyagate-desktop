@@ -1,29 +1,29 @@
 import React, { useEffect, useRef } from 'react'
-import { Layout, Menu, Badge, Typography, Space, theme } from 'antd'
+import { Layout, Menu, Badge, Typography, Space, theme, Tooltip } from 'antd'
 import {
-  LoginOutlined,
   AppstoreOutlined,
   CameraOutlined,
-  ControlOutlined,
   LinkOutlined,
   ApiOutlined,
   BookOutlined,
   ThunderboltOutlined,
   SafetyCertificateOutlined,
-  WechatOutlined,
   EyeOutlined,
   AlertOutlined,
   HistoryOutlined,
   DashboardOutlined,
   DollarOutlined,
   BarChartOutlined,
+  CloudOutlined,
+  HomeOutlined,
+  NodeIndexOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useLicenseStore } from '../stores/licenseStore'
 import { useUserStore } from '../stores/userStore'
 import { isCameraSupported } from '../services/mcp-client'
-import { Tooltip } from 'antd'
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
@@ -31,30 +31,62 @@ const { Text } = Typography
 const cameraSupported = isCameraSupported()
 
 const menuItems = [
-  { key: '/', icon: <LoginOutlined />, label: '授权登录' },
-  { key: '/dashboard', icon: <DashboardOutlined />, label: '数据看板' },
-  { key: '/stats/tokens', icon: <DollarOutlined />, label: 'Token 统计' },
-  { key: '/stats/triggers', icon: <BarChartOutlined />, label: '触发统计' },
-  { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
-  { key: '/control', icon: <ControlOutlined />, label: '设备控制' },
   {
-    key: '/cameras',
-    icon: <CameraOutlined />,
-    label: cameraSupported
-      ? '摄像头'
-      : (
-          <Tooltip title="Windows 平台暂不支持" placement="right">
-            <span style={{ color: 'rgba(0,0,0,0.25)' }}>摄像头</span>
-          </Tooltip>
-        ),
+    type: 'group' as const,
+    label: '概览',
+    children: [
+      { key: '/', icon: <DashboardOutlined />, label: '数据看板' },
+    ],
   },
-  { key: '/vision', icon: <EyeOutlined />, label: 'Vision AI' },
-  { key: '/triggers', icon: <AlertOutlined />, label: '触发规则' },
-  { key: '/trigger-logs', icon: <HistoryOutlined />, label: '触发日志' },
-  { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
-  { key: '/license', icon: <SafetyCertificateOutlined />, label: '设备授权' },
-  // { key: '/wechat', icon: <WechatOutlined />, label: '微信登录' },
-  { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
+  {
+    type: 'group' as const,
+    label: '平台集成',
+    children: [
+      { key: '/platform/xiaomi', icon: <CloudOutlined />, label: '米家' },
+      { key: '/platform/tuya', icon: <CloudOutlined />, label: '涂鸦智能' },
+      { key: '/platform/midea', icon: <HomeOutlined />, label: '美的美居' },
+      { key: '/platform/ewelink', icon: <NodeIndexOutlined />, label: '易微联' },
+      { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
+    ],
+  },
+  {
+    type: 'group' as const,
+    label: '设备管理',
+    children: [
+      { key: '/devices', icon: <AppstoreOutlined />, label: '设备列表' },
+      {
+        key: '/cameras',
+        icon: <CameraOutlined />,
+        label: cameraSupported
+          ? '摄像头'
+          : (
+              <Tooltip title="Windows 平台暂不支持" placement="right">
+                <span style={{ color: 'rgba(0,0,0,0.25)' }}>摄像头</span>
+              </Tooltip>
+            ),
+      },
+    ],
+  },
+  {
+    type: 'group' as const,
+    label: 'AI 与自动化',
+    children: [
+      { key: '/schedules', icon: <ClockCircleOutlined />, label: '定时任务' },
+      { key: '/vision', icon: <EyeOutlined />, label: 'Vision AI' },
+      { key: '/triggers', icon: <AlertOutlined />, label: '触发规则' },
+      { key: '/trigger-logs', icon: <HistoryOutlined />, label: '触发日志' },
+    ],
+  },
+  {
+    type: 'group' as const,
+    label: '统计与系统',
+    children: [
+      { key: '/stats/tokens', icon: <DollarOutlined />, label: 'Token 统计' },
+      { key: '/stats/triggers', icon: <BarChartOutlined />, label: '触发统计' },
+      { key: '/license', icon: <SafetyCertificateOutlined />, label: '设备授权' },
+      { key: '/docs', icon: <BookOutlined />, label: '接口文档' },
+    ],
+  },
 ]
 
 interface Props {
@@ -119,7 +151,7 @@ export default function AppLayout({ children }: Props) {
           selectedKeys={[location.pathname]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
-          style={{ borderRight: 0, marginTop: 4 }}
+          style={{ borderRight: 0, marginTop: 4, fontSize: 13 }}
         />
       </Sider>
       <Layout>

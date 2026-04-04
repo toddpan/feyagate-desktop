@@ -773,3 +773,215 @@ export async function triggerLogs(limit = 50, ruleId?: string): Promise<{ logs: 
   if (ruleId) args.rule_id = ruleId
   return callTool<{ logs: TriggerLog[] }>('trigger/logs', args)
 }
+
+// ─── Platform (Multi-provider) APIs ─────────────────────────────
+
+export interface PlatformInfo {
+  platform_id: string
+  platform_name: string
+  authenticated: boolean
+  auth_status: Record<string, unknown>
+}
+
+export interface TuyaQrResult {
+  success: boolean
+  qr_url?: string
+  token?: string
+  expire_time?: number
+  error?: string
+}
+
+export interface TuyaQrStatusResult {
+  success: boolean
+  status: string
+  uid?: string
+  msg?: string
+}
+
+export interface TuyaDevice {
+  id: string
+  name: string
+  model: string
+  online: boolean
+  category: string
+  home_name: string
+  room_name: string
+}
+
+export async function getPlatforms(): Promise<PlatformInfo[]> {
+  return callTool<PlatformInfo[]>('auth/platforms')
+}
+
+export async function getTuyaQrCode(userCode: string): Promise<TuyaQrResult> {
+  return callTool<TuyaQrResult>('auth/tuya_qr', { user_code: userCode })
+}
+
+export async function checkTuyaQrStatus(token: string, userCode: string): Promise<TuyaQrStatusResult> {
+  return callTool<TuyaQrStatusResult>('auth/tuya_qr_status', { token, user_code: userCode })
+}
+
+export async function tuyaLogout(): Promise<{ success: boolean; message: string }> {
+  return callTool<{ success: boolean; message: string }>('auth/tuya_logout')
+}
+
+export async function getTuyaDevices(): Promise<{ count: number; devices: TuyaDevice[] }> {
+  return callTool<{ count: number; devices: TuyaDevice[] }>('tuya/devices')
+}
+
+export async function refreshTuyaDevices(): Promise<{ success: boolean; device_count: number }> {
+  return callTool<{ success: boolean; device_count: number }>('tuya/refresh')
+}
+
+export async function tuyaControl(deviceId: string, dpCode: string, value: unknown): Promise<{ success: boolean; message: string }> {
+  return callTool<{ success: boolean; message: string }>('tuya/control', { device_id: deviceId, dp_code: dpCode, value })
+}
+
+export async function getAllDevices(): Promise<{ total: number; devices: Array<TuyaDevice & { platform: string }> }> {
+  return callTool<{ total: number; devices: Array<TuyaDevice & { platform: string }> }>('device/list_all')
+}
+
+// ─── Midea (美的) APIs ─────────────────────────────────────────────
+
+export interface MideaDevice {
+  id: string
+  name: string
+  type: string
+  online: boolean
+  model_number?: string
+  sn?: string
+}
+
+export async function mideaLogin(account: string, password: string): Promise<{ success: boolean; message: string; device_count?: number }> {
+  return callTool('auth/midea_login', { account, password })
+}
+
+export async function mideaLogout(): Promise<{ success: boolean; message: string }> {
+  return callTool('auth/midea_logout')
+}
+
+export async function getMideaDevices(): Promise<{ count: number; devices: MideaDevice[] }> {
+  return callTool('midea/devices')
+}
+
+export async function refreshMideaDevices(): Promise<{ success: boolean; device_count: number }> {
+  return callTool('midea/refresh')
+}
+
+export async function getMideaDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
+  return callTool('midea/status', { device_id: deviceId })
+}
+
+export async function getMideaDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
+  return callTool('midea/specs', { device_id: deviceId })
+}
+
+export async function mideaControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
+  return callTool('midea/control', { device_id: deviceId, property, value })
+}
+
+// ─── eWeLink (易微联) APIs ─────────────────────────────────────────
+
+export interface EwelinkDevice {
+  id: string
+  name: string
+  type: string
+  online: boolean
+  brand?: string
+  model?: string
+}
+
+export async function ewelinkLogin(email: string, password: string, countryCode?: string): Promise<{ success: boolean; message: string; device_count?: number }> {
+  const args: Record<string, unknown> = { email, password }
+  if (countryCode) args.country_code = countryCode
+  return callTool('auth/ewelink_login', args)
+}
+
+export async function ewelinkLogout(): Promise<{ success: boolean; message: string }> {
+  return callTool('auth/ewelink_logout')
+}
+
+export async function getEwelinkDevices(): Promise<{ count: number; devices: EwelinkDevice[] }> {
+  return callTool('ewelink/devices')
+}
+
+export async function refreshEwelinkDevices(): Promise<{ success: boolean; device_count: number }> {
+  return callTool('ewelink/refresh')
+}
+
+export async function getEwelinkDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
+  return callTool('ewelink/status', { device_id: deviceId })
+}
+
+export async function getEwelinkDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
+  return callTool('ewelink/specs', { device_id: deviceId })
+}
+
+export async function ewelinkControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
+  return callTool('ewelink/control', { device_id: deviceId, property, value })
+}
+
+// ─── Schedule (定时任务) APIs ─────────────────────────────────────────
+
+export interface ScheduleTask {
+  id: number
+  name: string
+  scheduled_time: number
+  tool_name: string
+  tool_args: string
+  status: string
+  result: string
+  created_at: number
+  executed_at: number
+  repeat: string
+  repeat_days: number
+  time_of_day: number
+  execute_count: number
+}
+
+export interface ScheduleTaskSummary {
+  id: number
+  name: string
+  scheduled_time: number
+  tool_name: string
+  status: string
+  repeat: string
+  execute_count: number
+}
+
+export async function scheduleAdd(
+  name: string, scheduledTime: string, toolName: string, toolArgs: string,
+  repeat?: string, repeatDays?: string
+): Promise<{ success: boolean; id?: number; error?: string }> {
+  const args: Record<string, unknown> = { name, scheduled_time: scheduledTime, tool_name: toolName, tool_args: toolArgs }
+  if (repeat) args.repeat = repeat
+  if (repeatDays) args.repeat_days = repeatDays
+  return callTool('schedule/add', args)
+}
+
+export async function scheduleList(status?: string): Promise<{ total: number; tasks: ScheduleTaskSummary[] }> {
+  const args: Record<string, unknown> = {}
+  if (status) args.status = status
+  return callTool('schedule/list', args)
+}
+
+export async function scheduleGet(id: number): Promise<ScheduleTask> {
+  return callTool('schedule/get', { id })
+}
+
+export async function scheduleUpdate(
+  id: number, scheduledTime?: string, repeat?: string, repeatDays?: string
+): Promise<{ success: boolean; error?: string }> {
+  const args: Record<string, unknown> = { id }
+  if (scheduledTime) args.scheduled_time = scheduledTime
+  if (repeat) args.repeat = repeat
+  if (repeatDays) args.repeat_days = repeatDays
+  return callTool('schedule/update', args)
+}
+
+export async function scheduleDelete(id: number): Promise<{ success: boolean; error?: string }> {
+  return callTool('schedule/delete', { id })
+}
+
+export async function scheduleCancel(id: number): Promise<{ success: boolean; error?: string }> {
+  return callTool('schedule/cancel', { id })
+}

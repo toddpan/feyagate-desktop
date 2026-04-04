@@ -1,19 +1,31 @@
 import { create } from 'zustand'
 import * as mcp from '../services/mcp-client'
-import type { Device } from '../services/mcp-client'
+
+export interface UnifiedDevice {
+  id: string
+  name: string
+  model: string
+  platform: string
+  online: boolean
+  category: string
+  home_name: string
+  room_name: string
+}
 
 interface DeviceState {
-  devices: Device[]
+  devices: UnifiedDevice[]
   totalCount: number
   loading: boolean
   refreshing: boolean
   error: string | null
   searchKeyword: string
+  platformFilter: string
 
-  fetchDevices: (filter?: string[]) => Promise<void>
+  fetchDevices: () => Promise<void>
   refreshDevices: () => Promise<void>
   setSearchKeyword: (keyword: string) => void
-  filteredDevices: () => Device[]
+  setPlatformFilter: (platform: string) => void
+  filteredDevices: () => UnifiedDevice[]
 }
 
 export const useDeviceStore = create<DeviceState>((set, get) => ({
@@ -23,14 +35,15 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
   refreshing: false,
   error: null,
   searchKeyword: '',
+  platformFilter: '',
 
-  fetchDevices: async (filter?: string[]) => {
+  fetchDevices: async () => {
     set({ loading: true, error: null })
     try {
-      const result = await mcp.getDeviceList(filter)
+      const result = await mcp.getAllDevices()
       set({
-        devices: result.devices,
-        totalCount: result.count,
+        devices: result.devices as UnifiedDevice[],
+        totalCount: result.total,
         loading: false,
       })
     } catch (e) {
@@ -41,7 +54,6 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
   refreshDevices: async () => {
     set({ refreshing: true, error: null })
     try {
-      await mcp.refreshDevices()
       await get().fetchDevices()
       set({ refreshing: false })
     } catch (e) {
@@ -53,16 +65,25 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
     set({ searchKeyword: keyword })
   },
 
+  setPlatformFilter: (platform: string) => {
+    set({ platformFilter: platform })
+  },
+
   filteredDevices: () => {
-    const { devices, searchKeyword } = get()
-    if (!searchKeyword.trim()) return devices
+    const { devices, searchKeyword, platformFilter } = get()
+    let filtered = devices
+    if (platformFilter) {
+      filtered = filtered.filter((d) => d.platform === platformFilter)
+    }
+    if (!searchKeyword.trim()) return filtered
     const kw = searchKeyword.toLowerCase()
-    return devices.filter(
+    return filtered.filter(
       (d) =>
         d.name.toLowerCase().includes(kw) ||
         d.model.toLowerCase().includes(kw) ||
-        d.room.toLowerCase().includes(kw) ||
-        d.home.toLowerCase().includes(kw)
+        (d.room_name || '').toLowerCase().includes(kw) ||
+        (d.home_name || '').toLowerCase().includes(kw) ||
+        d.platform.toLowerCase().includes(kw)
     )
   },
 }))
