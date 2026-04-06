@@ -57,6 +57,20 @@ async function findFreePort(preferred: number, maxAttempts = 20): Promise<number
   return 0
 }
 
+function copyDirRecursive(src: string, dest: string) {
+  if (!fs.existsSync(src)) return
+  fs.mkdirSync(dest, { recursive: true })
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name)
+    const destPath = path.join(dest, entry.name)
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath)
+    } else {
+      fs.copyFileSync(srcPath, destPath)
+    }
+  }
+}
+
 async function ensureUserConfig(): Promise<string> {
   const { defaultConfig, userDataDir, userConfig } = getServerPaths()
 
@@ -66,6 +80,26 @@ async function ensureUserConfig(): Promise<string> {
 
   if (!fs.existsSync(userConfig)) {
     fs.copyFileSync(defaultConfig, userConfig)
+  }
+
+  const isDev = !!VITE_DEV_SERVER_URL
+  const resourceBase = isDev
+    ? path.resolve(__dirname, '../resources/server')
+    : path.join(process.resourcesPath!, 'server')
+  const builtinSkillsSrc = path.join(resourceBase, 'skills')
+  const builtinSkillsDest = path.join(userDataDir, 'skills')
+  if (fs.existsSync(builtinSkillsSrc)) {
+    copyDirRecursive(builtinSkillsSrc, builtinSkillsDest)
+    console.log('[MCP Server] Synced built-in skills to', builtinSkillsDest)
+  }
+
+  const dataMemory = path.join(userDataDir, 'data', 'memory')
+  if (!fs.existsSync(dataMemory)) {
+    fs.mkdirSync(dataMemory, { recursive: true })
+  }
+  const dataSkills = path.join(userDataDir, 'data', 'skills')
+  if (!fs.existsSync(dataSkills)) {
+    fs.mkdirSync(dataSkills, { recursive: true })
   }
 
   let cfg = fs.readFileSync(userConfig, 'utf-8')

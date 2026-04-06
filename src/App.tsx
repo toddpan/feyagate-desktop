@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
+import PlatformGate from './components/PlatformGate'
 import UpdateNotification from './components/UpdateNotification'
 import Auth from './pages/Auth'
 import XiaomiAuth from './pages/XiaomiAuth'
@@ -19,6 +20,8 @@ import TuyaAuth from './pages/TuyaAuth'
 import MideaAuth from './pages/MideaAuth'
 import EwelinkAuth from './pages/EwelinkAuth'
 import Schedules from './pages/Schedules'
+import Memory from './pages/Memory'
+import Skills from './pages/Skills'
 
 export default function App() {
   return (
@@ -37,10 +40,12 @@ export default function App() {
         <Route path="/trigger-logs" element={<TriggerLogs />} />
         <Route path="/xiaozhi" element={<XiaozhiSettings />} />
         <Route path="/license" element={<LicenseSettings />} />
+        <Route path="/memory" element={<Memory />} />
+        <Route path="/skills" element={<Skills />} />
         <Route path="/platform/xiaomi" element={<XiaomiAuth />} />
-        <Route path="/platform/tuya" element={<TuyaAuth />} />
-        <Route path="/platform/midea" element={<MideaAuth />} />
-        <Route path="/platform/ewelink" element={<EwelinkAuth />} />
+        <Route path="/platform/tuya" element={<PlatformGate platform="tuya"><TuyaAuth /></PlatformGate>} />
+        <Route path="/platform/midea" element={<PlatformGate platform="midea"><MideaAuth /></PlatformGate>} />
+        <Route path="/platform/ewelink" element={<PlatformGate platform="ewelink"><EwelinkAuth /></PlatformGate>} />
         <Route path="/tuya" element={<Navigate to="/platform/tuya" replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/docs" element={<McpDocs />} />

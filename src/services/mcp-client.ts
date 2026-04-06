@@ -985,3 +985,100 @@ export async function scheduleDelete(id: number): Promise<{ success: boolean; er
 export async function scheduleCancel(id: number): Promise<{ success: boolean; error?: string }> {
   return callTool('schedule/cancel', { id })
 }
+
+// ─── Memory APIs ────────────────────────────────────────────────────
+
+export interface MemoryReadResult {
+  content: string
+  message?: string
+}
+
+export interface MemoryListResult {
+  dates: string[]
+  count: number
+  has_long_term: boolean
+}
+
+export interface MemoryContextResult {
+  context: string
+  empty: boolean
+}
+
+export interface MemorySearchResult {
+  matches: string
+  message?: string
+}
+
+export async function memoryRead(type: string, date?: string): Promise<MemoryReadResult> {
+  const args: Record<string, unknown> = { type }
+  if (date) args.date = date
+  return callTool('memory/read', args)
+}
+
+export async function memoryWrite(content: string): Promise<{ success: boolean }> {
+  return callTool('memory/write', { content })
+}
+
+export async function memoryAppend(content: string, type = 'today'): Promise<{ success: boolean }> {
+  return callTool('memory/append', { content, type })
+}
+
+export async function memoryList(days = 30): Promise<MemoryListResult> {
+  return callTool('memory/list', { days })
+}
+
+export async function memoryContext(): Promise<MemoryContextResult> {
+  return callTool('memory/context')
+}
+
+export async function memorySearch(keyword: string): Promise<MemorySearchResult> {
+  return callTool('memory/search', { keyword })
+}
+
+export async function memoryDelete(date: string): Promise<{ success: boolean; date: string }> {
+  return callTool('memory/delete', { date })
+}
+
+// ─── Skill APIs ─────────────────────────────────────────────────────
+
+export interface SkillItem {
+  name: string
+  description: string
+  source: string
+  always: boolean
+  tags: string[]
+  path: string
+}
+
+export interface SkillDetail extends SkillItem {
+  content: string
+  body: string
+}
+
+export async function skillList(source = 'all'): Promise<{ skills: SkillItem[]; count: number }> {
+  return callTool('skill/list', { source })
+}
+
+export async function skillRead(name: string): Promise<SkillDetail> {
+  return callTool('skill/read', { name })
+}
+
+export async function skillCreate(name: string, content: string): Promise<{ success: boolean; name: string; error?: string }> {
+  return callTool('skill/create', { name, content })
+}
+
+export async function skillUpdate(name: string, content: string): Promise<{ success: boolean; name: string; error?: string }> {
+  return callTool('skill/update', { name, content })
+}
+
+export async function skillDelete(name: string): Promise<{ success: boolean; name: string; error?: string }> {
+  return callTool('skill/delete', { name })
+}
+
+export async function skillContext(): Promise<{ context: string; skill_count: number }> {
+  return callTool('skill/context')
+}
+
+export async function skillReload(): Promise<{ success: boolean; skill_count: number }> {
+  return callTool('skill/reload')
+}
