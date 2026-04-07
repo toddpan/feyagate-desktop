@@ -11,13 +11,13 @@
  * All requests carry HMAC signature headers identical to the Android app.
  */
 
-const USER_API_BASE = 'https://feya.sooncore.com'
+const USER_API_BASE = 'https://www.feyagate.com'
 const USER_APP_ID = 'feyagate-web-app'
 const USER_APP_SECRET = 'b3f8a2d9c7e1f4b6a0d3e5f7c9b2a4d6e8f0b1c3d5a7e9f2b4c6d8a0e2f4b6c8'
 
 const WECHAT_WEB_APP_ID = 'wxbf7f2dd2817552b1'
 const WECHAT_REDIRECT_URI = `${USER_API_BASE}/auth/wechat/callback`
-export const WECHAT_CALLBACK_HOST = 'feya.sooncore.com'
+export const WECHAT_CALLBACK_HOST = 'www.feyagate.com'
 
 // ── Crypto helpers ─────────────────────────────────────────────
 
