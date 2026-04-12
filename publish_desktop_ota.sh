@@ -1,6 +1,6 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 # FeyaGate Desktop OTA 发布脚本
-# 将编译后的 DMG/ZIP 上传到服务器并更新 fota.json 版本信息
+# 将编译后的 DMG/ZIP/AppImage 上传到服务器并更新 fota.json 版本信息
 #
 # 用法:
 #   ./publish_desktop_ota.sh                              # 使用 package.json 中的版本号
