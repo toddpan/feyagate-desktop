@@ -1,6 +1,6 @@
 {
   "name": "feyagate-desktop",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "FeyaGate Desktop - Xiaomi MiHome Camera MCP Client",
   "main": "dist-electron/main.js",
   "private": true,
