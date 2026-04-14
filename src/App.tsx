@@ -22,6 +22,7 @@ import EwelinkAuth from './pages/EwelinkAuth'
 import Schedules from './pages/Schedules'
 import Memory from './pages/Memory'
 import Skills from './pages/Skills'
+import SkillStore from './pages/SkillStore'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/license" element={<LicenseSettings />} />
         <Route path="/memory" element={<Memory />} />
         <Route path="/skills" element={<Skills />} />
+        <Route path="/skill-store" element={<SkillStore />} />
         <Route path="/platform/xiaomi" element={<XiaomiAuth />} />
         <Route path="/platform/tuya" element={<PlatformGate platform="tuya"><TuyaAuth /></PlatformGate>} />
         <Route path="/platform/midea" element={<PlatformGate platform="midea"><MideaAuth /></PlatformGate>} />

@@ -100,6 +100,7 @@ function buildMenuItems(isPlatformEnabled: (p: string) => boolean) {
       children: [
         { key: '/memory', icon: <FileTextOutlined />, label: '记忆' },
         { key: '/skills', icon: <BulbOutlined />, label: '技能' },
+        { key: '/skill-store', icon: <AppstoreOutlined />, label: '技能商店' },
         { key: '/schedules', icon: <ClockCircleOutlined />, label: '定时任务' },
         { key: '/vision', icon: <EyeOutlined />, label: 'Vision AI' },
         { key: '/triggers', icon: <AlertOutlined />, label: '触发规则' },
