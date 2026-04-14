@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Card, Typography, Space, Button, Input, Tag, Empty, message, Modal,
   Spin, List, Segmented, Badge,
@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons'
 import {
   fetchSkillStoreList, fetchSkillStoreDetail, downloadSkill,
-  StoreSkill,
+  fetchSkillStoreCategories, StoreSkill, CategoryCount,
 } from '../services/skill-store-api'
 import { skillCreate } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
@@ -37,6 +37,25 @@ const ICON_MAP: Record<string, string> = {
   shield: '🛡️', music: '🎵', camera: '📷', timer: '⏰',
 }
 
+function simpleMarkdown(md: string): string {
+  let body = md.replace(/^---[\s\S]*?---\n*/m, '')
+  return body
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```[\s\S]*?```/g, (m) => {
+      const inner = m.replace(/^```\w*\n?/, '').replace(/\n?```$/, '')
+      return `<pre style="background:#f5f5f5;padding:8px 12px;border-radius:4px;font-size:12px;overflow-x:auto">${inner}</pre>`
+    })
+    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/^### (.+)$/gm, '<h4 style="margin:12px 0 4px">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin:14px 0 6px">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 style="margin:16px 0 8px">$1</h2>')
+    .replace(/^\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li style="margin-left:16px">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li style="margin-left:16px;list-style:decimal">$1</li>')
+    .replace(/\n{2,}/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>')
+}
+
 function parseTags(tagsStr: string): string[] {
   try {
     return JSON.parse(tagsStr || '[]')
@@ -53,6 +72,10 @@ export default function SkillStore() {
   const [page, setPage] = useState(1)
   const [category, setCategory] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [inputKeyword, setInputKeyword] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+
+  const [categoryCounts, setCategoryCounts] = useState<CategoryCount[]>([])
 
   const [detailVisible, setDetailVisible] = useState(false)
   const [detailSkill, setDetailSkill] = useState<StoreSkill | null>(null)
@@ -73,6 +96,10 @@ export default function SkillStore() {
   useEffect(() => {
     loadSkills()
   }, [loadSkills])
+
+  useEffect(() => {
+    fetchSkillStoreCategories().then(setCategoryCounts).catch(() => {})
+  }, [])
 
   const handleView = async (skill: StoreSkill) => {
     try {
@@ -107,10 +134,13 @@ export default function SkillStore() {
     setInstalling(false)
   }
 
-  const categoryOptions = ['', 'home', 'automation', 'utility', 'entertainment', 'security'].map(c => ({
-    label: CATEGORY_LABELS[c] || c,
-    value: c,
-  }))
+  const countMap = Object.fromEntries(categoryCounts.map(c => [c.category, c.count]))
+  const totalCount = categoryCounts.reduce((sum, c) => sum + c.count, 0)
+  const categoryOptions = ['', 'home', 'automation', 'utility', 'entertainment', 'security'].map(c => {
+    const count = c === '' ? totalCount : (countMap[c] ?? 0)
+    const label = CATEGORY_LABELS[c] || c
+    return { label: categoryCounts.length > 0 ? `${label}(${count})` : label, value: c }
+  })
 
   return (
     <Spin spinning={loading}>
@@ -125,9 +155,14 @@ export default function SkillStore() {
             <Input
               placeholder="搜索技能..."
               prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
+              value={inputKeyword}
+              onChange={(e) => {
+                setInputKeyword(e.target.value)
+                if (debounceRef.current) clearTimeout(debounceRef.current)
+                debounceRef.current = setTimeout(() => { setKeyword(e.target.value); setPage(1) }, 300)
+              }}
               allowClear
+              onClear={() => { setInputKeyword(''); setKeyword(''); setPage(1) }}
               style={{ width: 200 }}
             />
           </Space>
@@ -237,14 +272,14 @@ export default function SkillStore() {
                 {parseTags(detailSkill.tags).map((t) => <Tag key={t}>{t}</Tag>)}
               </Space>
             )}
-            <pre style={{
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              background: '#fafafa', padding: 12, borderRadius: 6,
-              fontSize: 13, maxHeight: 400, overflow: 'auto',
-              border: '1px solid #f0f0f0',
-            }}>
-              {detailSkill.content}
-            </pre>
+            <div
+              style={{
+                background: '#fafafa', padding: 12, borderRadius: 6,
+                fontSize: 13, maxHeight: 400, overflow: 'auto',
+                border: '1px solid #f0f0f0', lineHeight: 1.6,
+              }}
+              dangerouslySetInnerHTML={{ __html: simpleMarkdown(detailSkill.content) }}
+            />
           </Space>
         )}
       </Modal>
