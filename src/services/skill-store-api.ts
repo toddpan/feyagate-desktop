@@ -2,10 +2,10 @@ const STORE_BASE_URL = 'https://www.feyagate.com'
 const APP_ID = 'feyagate-web-app'
 const APP_SECRET = 'b3f8a2d9c7e1f4b6a0d3e5f7c9b2a4d6e8f0b1c3d5a7e9f2b4c6d8a0e2f4b6c8'
 
-function hexToBytes(hex: string): Uint8Array {
+function hexToBytes(hex: string): ArrayBuffer {
   const b = new Uint8Array(hex.length / 2)
   for (let i = 0; i < hex.length; i += 2) b[i / 2] = parseInt(hex.substr(i, 2), 16)
-  return b
+  return b.buffer as ArrayBuffer
 }
 
 function bytesToHex(buf: ArrayBuffer): string {

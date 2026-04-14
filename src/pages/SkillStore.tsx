@@ -94,9 +94,7 @@ export default function SkillStore() {
     try {
       await downloadSkill(detailSkill.id)
 
-      const nameMatch = detailSkill.content.match(/^name:\s*(.+)$/m)
-      const name = nameMatch ? nameMatch[1].trim().replace(/^["']|["']$/g, '') : detailSkill.id
-      const res = await skillCreate(name, detailSkill.content)
+      const res = await skillCreate(detailSkill.id, detailSkill.content)
       if (res.success) {
         message.success(`技能 "${detailSkill.name}" 安装成功`)
         setDetailVisible(false)
