@@ -69,7 +69,7 @@ interface ToolDoc {
 
 const tools: ToolDoc[] = [
   {
-    name: 'auth/status',
+    name: 'xiaomi/auth_status',
     description: '查询小米 OAuth 授权状态，包括是否已授权、云服务器区域、Token 剩余有效时间。',
     icon: <SafetyCertificateOutlined />,
     category: 'auth',
@@ -78,7 +78,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 1,
         method: 'tools/call',
-        params: { name: 'auth/status', arguments: {} },
+        params: { name: 'xiaomi/auth_status', arguments: {} },
       }, null, 2),
       response: JSON.stringify({
         authorized: true,
@@ -88,7 +88,7 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'auth/url',
+    name: 'xiaomi/auth_url',
     description: '获取小米 OAuth 授权 URL。用户需要在浏览器中打开此 URL 完成登录。登录后浏览器会重定向到 https://127.0.0.1/?code=xxx。',
     icon: <LinkOutlined />,
     category: 'auth',
@@ -97,7 +97,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 2,
         method: 'tools/call',
-        params: { name: 'auth/url', arguments: {} },
+        params: { name: 'xiaomi/auth_url', arguments: {} },
       }, null, 2),
       response: JSON.stringify({
         url: 'https://account.xiaomi.com/oauth2/authorize?client_id=...&redirect_uri=https://127.0.0.1&...',
@@ -105,7 +105,7 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'auth/callback',
+    name: 'xiaomi/auth_callback',
     description: '处理 OAuth 回调授权码。用户在浏览器完成授权后，从重定向 URL 中提取 code 参数并提交。',
     icon: <SafetyCertificateOutlined />,
     category: 'auth',
@@ -116,7 +116,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 3,
         method: 'tools/call',
-        params: { name: 'auth/callback', arguments: { code: 'abc123def456' } },
+        params: { name: 'xiaomi/auth_callback', arguments: { code: 'abc123def456' } },
       }, null, 2),
       response: JSON.stringify({ success: true }, null, 2),
     },
@@ -145,7 +145,7 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'device/refresh',
+    name: 'xiaomi/refresh',
     description: '从小米云端强制刷新设备列表。在米家 APP 中添加或删除设备后调用此接口。',
     icon: <AppstoreOutlined />,
     category: 'device',
@@ -154,7 +154,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 5,
         method: 'tools/call',
-        params: { name: 'device/refresh', arguments: {} },
+        params: { name: 'xiaomi/refresh', arguments: {} },
       }, null, 2),
       response: JSON.stringify({
         success: true,
@@ -164,7 +164,7 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'camera/list',
+    name: 'xiaomi/camera_list',
     description: '列出所有发现的小米摄像头，包括设备 ID、名称、型号、房间、在线状态和通道数。',
     icon: <VideoCameraOutlined />,
     category: 'camera',
@@ -175,7 +175,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 6,
         method: 'tools/call',
-        params: { name: 'camera/list', arguments: {} },
+        params: { name: 'xiaomi/camera_list', arguments: {} },
       }, null, 2),
       response: JSON.stringify({
         count: 1,
@@ -186,8 +186,8 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'camera/connect',
-    description: '连接到小米摄像头并开始接收视频流。帧会被解码为 JPEG 并缓存。需先用 camera/list 获取 camera_id。',
+    name: 'xiaomi/camera_connect',
+    description: '连接到小米摄像头并开始接收视频流。帧会被解码为 JPEG 并缓存。需先用 xiaomi/camera_list 获取 camera_id。',
     icon: <VideoCameraOutlined />,
     category: 'camera',
     params: [
@@ -197,13 +197,13 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 7,
         method: 'tools/call',
-        params: { name: 'camera/connect', arguments: { camera_id: '987654321' } },
+        params: { name: 'xiaomi/camera_connect', arguments: { camera_id: '987654321' } },
       }, null, 2),
       response: JSON.stringify({ status: 'connecting', camera_id: '987654321' }, null, 2),
     },
   },
   {
-    name: 'camera/disconnect',
+    name: 'xiaomi/camera_disconnect',
     description: '停止视频流并断开与摄像头的连接。',
     icon: <VideoCameraOutlined />,
     category: 'camera',
@@ -214,13 +214,13 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 8,
         method: 'tools/call',
-        params: { name: 'camera/disconnect', arguments: { camera_id: '987654321' } },
+        params: { name: 'xiaomi/camera_disconnect', arguments: { camera_id: '987654321' } },
       }, null, 2),
       response: JSON.stringify({ status: 'disconnected', camera_id: '987654321' }, null, 2),
     },
   },
   {
-    name: 'camera/status',
+    name: 'xiaomi/camera_status',
     description: '获取摄像头的流连接状态。显示是否连接并在活跃传输，以及缓存的可用帧数。',
     icon: <VideoCameraOutlined />,
     category: 'camera',
@@ -231,7 +231,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 9,
         method: 'tools/call',
-        params: { name: 'camera/status', arguments: { camera_id: '987654321' } },
+        params: { name: 'xiaomi/camera_status', arguments: { camera_id: '987654321' } },
       }, null, 2),
       response: JSON.stringify({
         connected_count: 1,
@@ -242,8 +242,8 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'camera/snapshot',
-    description: '获取已连接摄像头的最新 JPEG 帧。返回 base64 编码的图片数据。需先调用 camera/connect。',
+    name: 'xiaomi/camera_snapshot',
+    description: '获取已连接摄像头的最新 JPEG 帧。返回 base64 编码的图片数据。需先调用 xiaomi/camera_connect。',
     icon: <VideoCameraOutlined />,
     category: 'camera',
     params: [
@@ -255,7 +255,7 @@ const tools: ToolDoc[] = [
       request: JSON.stringify({
         jsonrpc: '2.0', id: 10,
         method: 'tools/call',
-        params: { name: 'camera/snapshot', arguments: { camera_id: '987654321', count: 1 } },
+        params: { name: 'xiaomi/camera_snapshot', arguments: { camera_id: '987654321', count: 1 } },
       }, null, 2),
       response: `{
   "content": [
@@ -306,44 +306,46 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'xiaomi/get_device_spec',
-    description: '获取设备的 MIOT SPEC 功能定义（服务、属性、动作），返回轻量化格式。每个属性/动作包含 iid 标识符。',
+    name: 'device/specs',
+    description: '获取设备的功能规格定义（跨平台统一）。自动识别设备所属平台并返回属性、动作等定义。',
     icon: <AppstoreOutlined />,
-    category: 'xiaomi',
+    category: 'device',
     params: [
-      { name: 'device_id', type: 'string', required: true, desc: '小米设备ID (did)' },
+      { name: 'device_id', type: 'string', required: true, desc: '设备ID' },
     ],
     example: {
-      request: JSON.stringify({ jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'xiaomi/get_device_spec', arguments: { device_id: '534345813' } } }, null, 2),
-      response: JSON.stringify({ specType: 'urn:miot-spec-v2:device:light:...', services: [{ siid: 2, description: 'Light', properties: [{ iid: 'prop.device.2.1', name: 'Switch', format: 'bool', access: 'read,write' }], actions: [{ iid: 'action.device.2.1', name: 'Toggle', in: [] }] }] }, null, 2),
+      request: JSON.stringify({ jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'device/specs', arguments: { device_id: '534345813' } } }, null, 2),
+      response: JSON.stringify({ success: true, platform: 'xiaomi', spec: { services: [{ siid: 2, description: 'Light', properties: [{ piid: 1, name: 'Switch', format: 'bool', access: ['read', 'write'] }], actions: [{ aiid: 1, name: 'Toggle', in: [] }] }] } }, null, 2),
     },
   },
   {
-    name: 'xiaomi/send_ctrl_rpc',
-    description: '统一控制小米设备。iid 格式: prop.device.siid.piid (属性) 或 action.device.siid.aiid (动作)。',
+    name: 'set_xiaomi_device_property',
+    description: '设置小米设备属性值。通过 siid/piid 指定属性。',
     icon: <ThunderboltOutlined />,
     category: 'xiaomi',
     params: [
-      { name: 'device_id', type: 'string', required: true, desc: '设备ID' },
-      { name: 'iid', type: 'string', required: true, desc: 'SPEC 实例 ID，如 prop.device.2.1' },
-      { name: 'value', type: 'any', required: false, desc: '属性值或动作参数数组' },
+      { name: 'deviceId', type: 'string', required: true, desc: '设备ID' },
+      { name: 'siid', type: 'number', required: true, desc: '服务实例 ID（如 2）' },
+      { name: 'piid', type: 'number', required: true, desc: '属性实例 ID（如 1）' },
+      { name: 'value', type: 'any', required: true, desc: '属性值' },
     ],
     example: {
-      request: JSON.stringify({ jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'xiaomi/send_ctrl_rpc', arguments: { device_id: '534345813', iid: 'prop.device.2.1', value: true } } }, null, 2),
+      request: JSON.stringify({ jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'set_xiaomi_device_property', arguments: { deviceId: '534345813', siid: 2, piid: 1, value: true } } }, null, 2),
       response: JSON.stringify({ success: true, data: { code: 0, message: 'ok' } }, null, 2),
     },
   },
   {
-    name: 'xiaomi/send_get_rpc',
-    description: '查询小米设备的单个属性当前值。仅支持 prop 类型 iid。',
+    name: 'get_xiaomi_device_properties',
+    description: '获取小米设备指定属性值。',
     icon: <ThunderboltOutlined />,
     category: 'xiaomi',
     params: [
-      { name: 'device_id', type: 'string', required: true, desc: '设备ID' },
-      { name: 'iid', type: 'string', required: true, desc: 'SPEC 属性实例 ID，如 prop.device.2.1' },
+      { name: 'deviceId', type: 'string', required: true, desc: '设备ID' },
+      { name: 'siid', type: 'number', required: true, desc: '服务实例 ID' },
+      { name: 'piids', type: 'number[]', required: true, desc: '属性实例 ID 数组，如 [1]' },
     ],
     example: {
-      request: JSON.stringify({ jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'xiaomi/send_get_rpc', arguments: { device_id: '534345813', iid: 'prop.device.2.1' } } }, null, 2),
+      request: JSON.stringify({ jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'get_xiaomi_device_properties', arguments: { deviceId: '534345813', siid: 2, piids: [1] } } }, null, 2),
       response: JSON.stringify({ code: 0, result: [{ did: '534345813', siid: 2, piid: 1, value: true, code: 0 }] }, null, 2),
     },
   },
@@ -530,7 +532,7 @@ Content-Type: application/json
   }
 }`} />
         <Divider style={{ margin: '12px 0' }} />
-        <Paragraph>图片数据以 base64 编码返回（camera/snapshot）：</Paragraph>
+        <Paragraph>图片数据以 base64 编码返回（xiaomi/camera_snapshot）：</Paragraph>
         <CodeBlock code={`{
   "content": [
     {
@@ -548,7 +550,7 @@ Content-Type: application/json
         <Paragraph style={{ marginTop: 12 }}>查询授权状态：</Paragraph>
         <CodeBlock code={`curl -X POST ${SERVER_URL}/mcp/http \\
   -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"auth/status","arguments":{}}}'`} language="bash" />
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xiaomi/auth_status","arguments":{}}}'`} language="bash" />
         <Paragraph style={{ marginTop: 12 }}>获取设备列表：</Paragraph>
         <CodeBlock code={`curl -X POST ${SERVER_URL}/mcp/http \\
   -H "Content-Type: application/json" \\
@@ -639,7 +641,7 @@ function IntegrationTab() {
           以下是通过 MCP 接口控制米家设备的完整流程（以控制灯为例）：
         </Paragraph>
         <CodeBlock code={`# 1. 检查授权
-auth/status → 确认 authorized=true
+xiaomi/auth_status → 确认 authorized=true
 
 # 2. 查看区域和设备类别
 xiaomi/get_area_info → 获取房间列表
@@ -649,15 +651,15 @@ xiaomi/get_device_classes → 获取设备类别
 xiaomi/get_devices(area_id="客厅", device_class="light") → 获取 did
 
 # 4. 获取设备 SPEC（属性和动作定义）
-xiaomi/get_device_spec(device_id="534345813") → 获取 iid 列表
+device/specs(device_id="534345813") → 获取属性/动作定义
 
 # 5. 读取属性
-xiaomi/send_get_rpc(device_id="534345813", iid="prop.device.2.1") → 开关状态
+get_xiaomi_device_properties(device_id="534345813", siid=2, piids=[1]) → 开关状态
 
 # 6. 控制设备
-xiaomi/send_ctrl_rpc(device_id="534345813", iid="prop.device.2.1", value=true)  → 开灯
-xiaomi/send_ctrl_rpc(device_id="534345813", iid="prop.device.2.2", value=70)    → 亮度70%
-xiaomi/send_ctrl_rpc(device_id="534345813", iid="action.device.2.1")            → Toggle`} language="bash" />
+set_xiaomi_device_property(device_id="534345813", siid=2, piid=1, value=true)  → 开灯
+set_xiaomi_device_property(device_id="534345813", siid=2, piid=2, value=70)    → 亮度70%
+execute_xiaomi_device_action(device_id="534345813", siid=2, aiid=1, params=[]) → Toggle`} language="bash" />
       </Card>
 
       <Card title="摄像头使用流程" size="small">
@@ -665,19 +667,19 @@ xiaomi/send_ctrl_rpc(device_id="534345813", iid="action.device.2.1")            
           以下是通过 MCP 接口管理摄像头的完整流程：
         </Paragraph>
         <CodeBlock code={`# 1. 列出摄像头
-camera/list → 获取 camera_id
+xiaomi/camera_list → 获取 camera_id
 
 # 2. 连接摄像头
-camera/connect(camera_id="xxx") → 开始视频流
+xiaomi/camera_connect(camera_id="xxx") → 开始视频流
 
 # 3. 等待几秒让缓冲区填充帧
-camera/status(camera_id="xxx") → 确认 buffered_frames > 0
+xiaomi/camera_status(camera_id="xxx") → 确认 buffered_frames > 0
 
 # 4. 获取快照
-camera/snapshot(camera_id="xxx", count=1) → 返回 JPEG base64 图片
+xiaomi/camera_snapshot(camera_id="xxx", count=1) → 返回 JPEG base64 图片
 
 # 5. 断开连接
-camera/disconnect(camera_id="xxx") → 停止流并释放资源`} language="bash" />
+xiaomi/camera_disconnect(camera_id="xxx") → 停止流并释放资源`} language="bash" />
       </Card>
 
       <Card title="注意事项" size="small">
@@ -692,7 +694,7 @@ camera/disconnect(camera_id="xxx") → 停止流并释放资源`} language="bash
           type="warning"
           showIcon
           message="摄像头限制"
-          description="同时连接的摄像头数量受网络带宽和设备性能限制。建议不要同时连接超过 3 个摄像头。使用完毕后请调用 camera/disconnect 释放资源。"
+          description="同时连接的摄像头数量受网络带宽和设备性能限制。建议不要同时连接超过 3 个摄像头。使用完毕后请调用 xiaomi/camera_disconnect 释放资源。"
         />
       </Card>
     </Space>

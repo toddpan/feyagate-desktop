@@ -177,16 +177,16 @@ export async function setServerUrl(url: string): Promise<void> {
 
 // Auth
 export async function getAuthStatus(): Promise<AuthStatus> {
-  return callTool<AuthStatus>('auth/status')
+  return callTool<AuthStatus>('xiaomi/auth_status')
 }
 
 export async function getAuthUrl(): Promise<string> {
-  const result = await callTool<AuthUrl>('auth/url')
+  const result = await callTool<AuthUrl>('xiaomi/auth_url')
   return result.url
 }
 
 export async function authCallback(code: string): Promise<AuthCallback> {
-  return callTool<AuthCallback>('auth/callback', { code })
+  return callTool<AuthCallback>('xiaomi/auth_callback', { code })
 }
 
 export function openOAuth(url: string) {
@@ -211,20 +211,20 @@ export async function getDeviceList(filter?: string[]): Promise<DeviceListResult
 }
 
 export async function refreshDevices(): Promise<RefreshResult> {
-  return callTool<RefreshResult>('device/refresh')
+  return callTool<RefreshResult>('xiaomi/refresh')
 }
 
 // Cameras
 export async function getCameraList(filter?: string[]): Promise<CameraListResult> {
   const args: Record<string, unknown> = {}
   if (filter?.length) args.filter = filter
-  return callTool<CameraListResult>('camera/list', args)
+  return callTool<CameraListResult>('xiaomi/camera_list', args)
 }
 
 export async function getCameraStatus(cameraId?: string): Promise<CameraStatusResult> {
   const args: Record<string, unknown> = {}
   if (cameraId) args.camera_id = cameraId
-  const raw = await callTool<Record<string, unknown>>('camera/status', args)
+  const raw = await callTool<Record<string, unknown>>('xiaomi/camera_status', args)
 
   if (Array.isArray(raw.cameras)) {
     const cameras = (raw.cameras as CameraStatusItem[]).map((c) => ({
@@ -243,11 +243,11 @@ export async function getCameraStatus(cameraId?: string): Promise<CameraStatusRe
 }
 
 export async function connectCamera(cameraId: string) {
-  return callTool('camera/connect', { camera_id: cameraId })
+  return callTool('xiaomi/camera_connect', { camera_id: cameraId })
 }
 
 export async function disconnectCamera(cameraId: string) {
-  return callTool('camera/disconnect', { camera_id: cameraId })
+  return callTool('xiaomi/camera_disconnect', { camera_id: cameraId })
 }
 
 // Xiaomi device control
@@ -316,17 +316,22 @@ export async function getXiaomiDevices(areaId?: string, deviceClass?: string): P
 }
 
 export async function getXiaomiDeviceSpec(deviceId: string): Promise<DeviceSpec> {
-  return callTool('xiaomi/get_device_spec', { device_id: deviceId })
+  return callTool('device/specs', { device_id: deviceId })
 }
 
 export async function xiaomiSendCtrlRpc(deviceId: string, iid: string, value?: unknown): Promise<Record<string, unknown>> {
-  const args: Record<string, unknown> = { device_id: deviceId, iid }
-  if (value !== undefined) args.value = value
-  return callTool('xiaomi/send_ctrl_rpc', args)
+  // Parse siid and piid from iid format "prop.device.SIID.PIID"
+  const parts = iid.split('.')
+  const siid = parts.length >= 3 ? parts[2] : '0'
+  const piid = parts.length >= 4 ? parts[3] : '0'
+  return callTool('set_xiaomi_device_property', { deviceId, siid: Number(siid), piid: Number(piid), value })
 }
 
 export async function xiaomiSendGetRpc(deviceId: string, iid: string): Promise<Record<string, unknown>> {
-  return callTool('xiaomi/send_get_rpc', { device_id: deviceId, iid })
+  const parts = iid.split('.')
+  const siid = parts.length >= 3 ? parts[2] : '0'
+  const piid = parts.length >= 4 ? parts[3] : '0'
+  return callTool('get_xiaomi_device_properties', { deviceId, siid: Number(siid), piids: [Number(piid)] })
 }
 
 export async function xiaomiSceneList(): Promise<Record<string, unknown>> {
@@ -451,7 +456,7 @@ export async function getCameraSnapshot(
   count = 1,
   channel = 0
 ): Promise<{ images: string[]; raw: ToolResponse }> {
-  const result = (await api.callTool('camera/snapshot', {
+  const result = (await api.callTool('xiaomi/camera_snapshot', {
     camera_id: cameraId,
     count,
     channel,
@@ -676,7 +681,7 @@ export async function visionChat(
   count = 3,
   channel = 0,
 ): Promise<VisionChatResult> {
-  return callTool<VisionChatResult>('camera/vision_chat', {
+  return callTool<VisionChatResult>('xiaomi/camera_vision_chat', {
     camera_id: cameraId,
     query,
     count,
@@ -824,8 +829,8 @@ export async function tuyaLogout(): Promise<{ success: boolean; message: string 
   return callTool<{ success: boolean; message: string }>('auth/tuya_logout')
 }
 
-export async function getTuyaDevices(): Promise<{ count: number; devices: TuyaDevice[] }> {
-  return callTool<{ count: number; devices: TuyaDevice[] }>('tuya/devices')
+export async function getTuyaDevices(): Promise<{ total: number; devices: TuyaDevice[] }> {
+  return callTool<{ total: number; devices: TuyaDevice[] }>('device/list', { platform: 'tuya' })
 }
 
 export async function refreshTuyaDevices(): Promise<{ success: boolean; device_count: number }> {
@@ -833,11 +838,11 @@ export async function refreshTuyaDevices(): Promise<{ success: boolean; device_c
 }
 
 export async function tuyaControl(deviceId: string, dpCode: string, value: unknown): Promise<{ success: boolean; message: string }> {
-  return callTool<{ success: boolean; message: string }>('tuya/control', { device_id: deviceId, dp_code: dpCode, value })
+  return callTool<{ success: boolean; message: string }>('set_tuya_device_property', { deviceId, code: dpCode, value })
 }
 
 export async function getAllDevices(): Promise<{ total: number; devices: Array<TuyaDevice & { platform: string }> }> {
-  return callTool<{ total: number; devices: Array<TuyaDevice & { platform: string }> }>('device/list_all')
+  return callTool<{ total: number; devices: Array<TuyaDevice & { platform: string }> }>('device/list')
 }
 
 // ─── Midea (美的) APIs ─────────────────────────────────────────────
@@ -859,8 +864,8 @@ export async function mideaLogout(): Promise<{ success: boolean; message: string
   return callTool('auth/midea_logout')
 }
 
-export async function getMideaDevices(): Promise<{ count: number; devices: MideaDevice[] }> {
-  return callTool('midea/devices')
+export async function getMideaDevices(): Promise<{ total: number; devices: MideaDevice[] }> {
+  return callTool('device/list', { platform: 'midea' })
 }
 
 export async function refreshMideaDevices(): Promise<{ success: boolean; device_count: number }> {
@@ -868,15 +873,15 @@ export async function refreshMideaDevices(): Promise<{ success: boolean; device_
 }
 
 export async function getMideaDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('midea/status', { device_id: deviceId })
+  return callTool('get_midea_device_properties', { deviceId })
 }
 
 export async function getMideaDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('midea/specs', { device_id: deviceId })
+  return callTool('device/specs', { device_id: deviceId })
 }
 
 export async function mideaControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
-  return callTool('midea/control', { device_id: deviceId, property, value })
+  return callTool('set_midea_device_property', { deviceId, property, value })
 }
 
 // ─── eWeLink (易微联) APIs ─────────────────────────────────────────
@@ -900,8 +905,8 @@ export async function ewelinkLogout(): Promise<{ success: boolean; message: stri
   return callTool('auth/ewelink_logout')
 }
 
-export async function getEwelinkDevices(): Promise<{ count: number; devices: EwelinkDevice[] }> {
-  return callTool('ewelink/devices')
+export async function getEwelinkDevices(): Promise<{ total: number; devices: EwelinkDevice[] }> {
+  return callTool('device/list', { platform: 'ewelink' })
 }
 
 export async function refreshEwelinkDevices(): Promise<{ success: boolean; device_count: number }> {
@@ -909,15 +914,15 @@ export async function refreshEwelinkDevices(): Promise<{ success: boolean; devic
 }
 
 export async function getEwelinkDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('ewelink/status', { device_id: deviceId })
+  return callTool('get_ewelink_device_properties', { deviceId })
 }
 
 export async function getEwelinkDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('ewelink/specs', { device_id: deviceId })
+  return callTool('device/specs', { device_id: deviceId })
 }
 
 export async function ewelinkControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
-  return callTool('ewelink/control', { device_id: deviceId, property, value })
+  return callTool('set_ewelink_device_property', { deviceId, property, value })
 }
 
 // ─── Schedule (定时任务) APIs ─────────────────────────────────────────

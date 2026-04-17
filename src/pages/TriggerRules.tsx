@@ -473,7 +473,7 @@ export default function TriggerRules() {
                       rules={[{ required: true, message: '请输入工具名' }]}
                       style={{ marginBottom: 8 }}
                     >
-                      <Input placeholder="如: xiaomi/send_ctrl_rpc, tuya/control" />
+                      <Input placeholder="如: set_xiaomi_device_property, set_tuya_device_property" />
                     </Form.Item>
                     <Form.Item
                       {...restField}
