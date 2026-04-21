@@ -1,11 +1,11 @@
 [
   {
     "type": "feyagate-desktop-mac",
-    "version": "1.2.0",
-    "url": "https://your-ota-server.example.com/ota/feyagate-desktop/FeyaGate-Desktop-v1.2.0-mac-x64.dmg",
-    "md5": "df77070207e46a9a72a485f11f8b0811",
-    "release_notes": "1. 添加技能商店 2. 优化 App 串口烧录 3. 修复 Bug",
+    "version": "1.2.2",
+    "url": "https://your-ota-server.example.com/ota/feyagate-desktop/FeyaGate-Desktop-v1.2.2-mac-x64.dmg",
+    "md5": "feae181d76d3a749c6b37aff58ed82f5",
+    "release_notes": "修复 易微联平台 4 开控制问题",
     "force_update": false,
-    "size": 153154329
+    "size": 160364619
   }
 ]
