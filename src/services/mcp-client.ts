@@ -342,17 +342,43 @@ export async function xiaomiSceneTrigger(sceneId: string): Promise<Record<string
   return callTool('xiaomi/scene_trigger', { sceneId })
 }
 
+export interface XiaozhiClientInfo {
+  index: number
+  endpoint: string
+  state: string
+  connected: boolean
+  initialized: boolean
+  bridged_tools: number
+}
+
 export interface XiaozhiStatus {
+  // Legacy single-client fields (backward compat)
   state: string
   endpoint: string
   connected: boolean
   initialized: boolean
   bridged_tools: number
   enabled: boolean
+  // Multi-client fields
+  clients: XiaozhiClientInfo[]
+  count: number
+  max_count: number
 }
 
 export async function getXiaozhiStatus(): Promise<XiaozhiStatus> {
   return callTool('xiaozhi/status', {}) as Promise<XiaozhiStatus>
+}
+
+export async function getXiaozhiList(): Promise<{
+  clients: XiaozhiClientInfo[]
+  count: number
+  max_count: number
+}> {
+  return callTool('xiaozhi/list', {}) as Promise<{
+    clients: XiaozhiClientInfo[]
+    count: number
+    max_count: number
+  }>
 }
 
 export interface XiaozhiSetEndpointResult {
@@ -364,6 +390,28 @@ export interface XiaozhiSetEndpointResult {
 
 export async function xiaozhiSetEndpoint(endpoint: string): Promise<XiaozhiSetEndpointResult> {
   return callTool('xiaozhi/set_endpoint', { endpoint }) as Promise<XiaozhiSetEndpointResult>
+}
+
+export interface XiaozhiAddResult {
+  success: boolean
+  endpoint?: string
+  index?: number
+  count?: number
+  error?: string
+}
+
+export async function xiaozhiAdd(endpoint: string): Promise<XiaozhiAddResult> {
+  return callTool('xiaozhi/add', { endpoint }) as Promise<XiaozhiAddResult>
+}
+
+export interface XiaozhiRemoveResult {
+  success: boolean
+  count?: number
+  error?: string
+}
+
+export async function xiaozhiRemove(index: number): Promise<XiaozhiRemoveResult> {
+  return callTool('xiaozhi/remove', { index }) as Promise<XiaozhiRemoveResult>
 }
 
 export async function xiaoaiTts(deviceId: string, text: string): Promise<Record<string, unknown>> {
