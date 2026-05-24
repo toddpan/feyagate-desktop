@@ -8,10 +8,11 @@ interface AuthState {
   loading: boolean
   error: string | null
   serverOnline: boolean
+  selectedRegion: string
 
   fetchStatus: () => Promise<void>
-  startOAuth: () => Promise<void>
-  handleCallback: (code: string) => Promise<void>
+  startOAuth: (region?: string) => Promise<void>
+  handleCallback: (code: string, region?: string) => Promise<void>
   checkServer: () => Promise<void>
 }
 
@@ -22,6 +23,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: false,
   error: null,
   serverOnline: false,
+  selectedRegion: 'cn',
 
   checkServer: async () => {
     try {
@@ -50,10 +52,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  startOAuth: async () => {
+  startOAuth: async (region?: string) => {
     set({ loading: true, error: null })
     try {
-      const url = await mcp.getAuthUrl()
+      const r = region || get().selectedRegion || 'cn'
+      const url = await mcp.getAuthUrl(r)
       await mcp.openOAuth(url)
       set({ loading: false })
     } catch (e) {
@@ -61,10 +64,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  handleCallback: async (code: string) => {
+  handleCallback: async (code: string, region?: string) => {
     set({ loading: true, error: null })
     try {
-      await mcp.authCallback(code)
+      const r = region || get().selectedRegion || 'cn'
+      await mcp.authCallback(code, r)
       await get().fetchStatus()
     } catch (e) {
       set({ loading: false, error: String(e) })

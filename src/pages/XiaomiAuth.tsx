@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Card, Typography, Space, Button, Tag, Empty,
   Table, Descriptions, message, Popconfirm, Input, Alert,
-  Modal, Steps, Divider, Spin, Result,
+  Modal, Steps, Divider, Spin, Result, Select,
 } from 'antd'
 import {
   CloudOutlined, ReloadOutlined, LoginOutlined,
@@ -19,6 +19,15 @@ import { useAuthStore } from '../stores/authStore'
 const { Title, Text } = Typography
 
 const isElectron = !!window.feyagate
+
+const REGION_OPTIONS = [
+  { value: 'cn', label: '中国大陆 (cn)' },
+  { value: 'de', label: '欧洲 (de)' },
+  { value: 'i2', label: '印度 (i2)' },
+  { value: 'ru', label: '俄罗斯 (ru)' },
+  { value: 'sg', label: '新加坡 (sg)' },
+  { value: 'us', label: '美国 (us)' },
+]
 
 function formatRemaining(seconds: number): string {
   if (seconds <= 0) return '已过期'
@@ -55,6 +64,9 @@ export default function XiaomiAuth() {
   const [devices, setDevices] = useState<Device[]>([])
   const [devLoading, setDevLoading] = useState(false)
   const [devRefreshing, setDevRefreshing] = useState(false)
+  const [selectedRegion, setSelectedRegion] = useState('cn')
+  const regionRef = useRef(selectedRegion)
+  regionRef.current = selectedRegion
 
   const [messageApi, contextHolder] = message.useMessage()
 
@@ -67,6 +79,7 @@ export default function XiaomiAuth() {
       const [plats, status] = await Promise.all([getPlatforms(), getAuthStatus()])
       setPlatforms(Array.isArray(plats) ? plats : [])
       setAuthStatus(status)
+      if (status.cloud_server) setSelectedRegion(status.cloud_server)
     } catch { /* ignore */ }
     finally { setLoading(false) }
   }, [])
@@ -95,7 +108,7 @@ export default function XiaomiAuth() {
   useEffect(() => {
     onAuthCode(async (code) => {
       try {
-        await authCallback(code)
+        await authCallback(code, regionRef.current)
         setOauthPending(false)
         messageApi.success('米家授权成功！')
         fetchPlatforms()
@@ -112,10 +125,10 @@ export default function XiaomiAuth() {
 
   const handleStartOAuth = async () => {
     if (isElectron) {
-      useAuthStore.getState().startOAuth()
+      useAuthStore.getState().startOAuth(selectedRegion)
     } else {
       try {
-        const url = await getAuthUrl()
+        const url = await getAuthUrl(selectedRegion)
         const serverUrl = await getServerUrl()
         const callbackBase = serverUrl || window.location.origin
         let popup: Window | null = null
@@ -164,7 +177,7 @@ export default function XiaomiAuth() {
     if (!code) { messageApi.error('无法识别授权码'); return }
     setSubmittingCode(true)
     try {
-      await authCallback(code)
+      await authCallback(code, selectedRegion)
       setOauthPending(false)
       setManualUrlInput('')
       if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
@@ -184,7 +197,7 @@ export default function XiaomiAuth() {
         if (code) {
           setSubmittingCode(true)
           try {
-            await authCallback(code)
+            await authCallback(code, selectedRegion)
             setOauthPending(false)
             setManualUrlInput('')
             if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
@@ -253,9 +266,17 @@ export default function XiaomiAuth() {
 
         <Space style={{ marginTop: 12 }} wrap>
           {!isAuthed && !oauthPending && (
-            <Button type="primary" icon={<LoginOutlined />} onClick={handleStartOAuth}>
-              使用米家账号登录
-            </Button>
+            <>
+              <Select
+                value={selectedRegion}
+                onChange={setSelectedRegion}
+                options={REGION_OPTIONS}
+                style={{ width: 160 }}
+              />
+              <Button type="primary" icon={<LoginOutlined />} onClick={handleStartOAuth}>
+                使用米家账号登录
+              </Button>
+            </>
           )}
           {isAuthed && (
             <>

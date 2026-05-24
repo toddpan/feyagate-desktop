@@ -180,13 +180,17 @@ export async function getAuthStatus(): Promise<AuthStatus> {
   return callTool<AuthStatus>('xiaomi/auth_status')
 }
 
-export async function getAuthUrl(): Promise<string> {
-  const result = await callTool<AuthUrl>('xiaomi/auth_url')
+export async function getAuthUrl(region?: string): Promise<string> {
+  const args: Record<string, unknown> = {}
+  if (region) args.region = region
+  const result = await callTool<AuthUrl & { region?: string }>('xiaomi/auth_url', args)
   return result.url
 }
 
-export async function authCallback(code: string): Promise<AuthCallback> {
-  return callTool<AuthCallback>('xiaomi/auth_callback', { code })
+export async function authCallback(code: string, region?: string): Promise<AuthCallback> {
+  const args: Record<string, unknown> = { code }
+  if (region) args.region = region
+  return callTool<AuthCallback>('xiaomi/auth_callback', args)
 }
 
 export function openOAuth(url: string) {
