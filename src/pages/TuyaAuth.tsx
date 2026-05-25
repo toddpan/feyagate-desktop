@@ -183,6 +183,9 @@ export default function TuyaAuth() {
               <Descriptions.Item label="用户 UID">
                 {(tuyaPlatform.auth_status as any).uid || '-'}
               </Descriptions.Item>
+              <Descriptions.Item label="区域端点">
+                {(tuyaPlatform.auth_status as any).endpoint || 'apigw.tuyacn.com'}
+              </Descriptions.Item>
               <Descriptions.Item label="Token 剩余">
                 {(tuyaPlatform.auth_status as any).token_remaining_seconds
                   ? `${Math.floor(Number((tuyaPlatform.auth_status as any).token_remaining_seconds) / 3600)} 小时`
