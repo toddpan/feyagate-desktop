@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   Card, Typography, Space, Button, Tag, Empty,
-  Table, Descriptions, message, Popconfirm, Input, Form,
+  Table, Descriptions, message, Popconfirm, Input, Form, Radio,
 } from 'antd'
 import {
   HomeOutlined, ReloadOutlined, LogoutOutlined,
@@ -57,10 +57,10 @@ export default function MideaAuth() {
     if (isAuthed) fetchDevices()
   }, [isAuthed, fetchDevices])
 
-  const handleLogin = async (values: { account: string; password: string }) => {
+  const handleLogin = async (values: { account: string; password: string; cloud: 'meiju' | 'msmart' }) => {
     try {
       setLoginLoading(true)
-      const result = await mideaLogin(values.account, values.password)
+      const result = await mideaLogin(values.account, values.password, values.cloud)
       if (result.success) {
         messageApi.success(`登录成功，共 ${result.device_count ?? 0} 台设备`)
         form.resetFields()
@@ -161,21 +161,33 @@ export default function MideaAuth() {
 
       {!isAuthed && (
         <Card title="账号登录" style={{ marginBottom: 16 }}>
-          <Form form={form} onFinish={handleLogin} layout="inline" style={{ gap: 8 }}>
-            <Form.Item name="account" rules={[{ required: true, message: '请输入手机号/邮箱' }]}>
-              <Input prefix={<UserOutlined />} placeholder="手机号 / 邮箱" style={{ width: 200 }} />
+          <Form form={form} onFinish={handleLogin} layout="vertical" initialValues={{ cloud: 'meiju' }}>
+            <Form.Item
+              name="cloud"
+              label="云服务"
+              rules={[{ required: true, message: '请选择云服务' }]}
+            >
+              <Radio.Group>
+                <Radio value="meiju">美的美居（中国）</Radio>
+                <Radio value="msmart">MSmartHome（国际）</Radio>
+              </Radio.Group>
             </Form.Item>
-            <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password prefix={<LockOutlined />} placeholder="密码" style={{ width: 180 }} />
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loginLoading}>
-                登录
-              </Button>
-            </Form.Item>
+            <Space>
+              <Form.Item name="account" rules={[{ required: true, message: '请输入手机号/邮箱' }]}>
+                <Input prefix={<UserOutlined />} placeholder="手机号 / 邮箱" style={{ width: 200 }} />
+              </Form.Item>
+              <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
+                <Input.Password prefix={<LockOutlined />} placeholder="密码" style={{ width: 180 }} />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={loginLoading}>
+                  登录
+                </Button>
+              </Form.Item>
+            </Space>
           </Form>
           <Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12 }}>
-            使用美的美居 App 注册的账号密码登录
+            美的美居：中国区域用户 | MSmartHome：国际区域用户（自动路由到所在区域）
           </Text>
         </Card>
       )}

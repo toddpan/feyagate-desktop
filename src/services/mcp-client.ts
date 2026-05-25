@@ -908,8 +908,8 @@ export interface MideaDevice {
   sn?: string
 }
 
-export async function mideaLogin(account: string, password: string): Promise<{ success: boolean; message: string; device_count?: number }> {
-  return callTool('auth/midea_login', { account, password })
+export async function mideaLogin(account: string, password: string, cloud: 'meiju' | 'msmart' = 'meiju'): Promise<{ success: boolean; message: string; device_count?: number }> {
+  return callTool('auth/midea_login', { account, password, cloud })
 }
 
 export async function mideaLogout(): Promise<{ success: boolean; message: string }> {
