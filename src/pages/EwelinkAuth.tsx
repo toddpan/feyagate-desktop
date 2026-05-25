@@ -16,21 +16,43 @@ import { useAuthStore } from '../stores/authStore'
 
 const { Title, Text } = Typography
 
+// 扩展的国家码列表（常用国家）
 const COUNTRY_CODES = [
-  { value: '+86', label: '中国 (+86)' },
-  { value: '+1', label: '美国 (+1)' },
-  { value: '+44', label: '英国 (+44)' },
-  { value: '+81', label: '日本 (+81)' },
-  { value: '+82', label: '韩国 (+82)' },
-  { value: '+49', label: '德国 (+49)' },
-  { value: '+33', label: '法国 (+33)' },
+  { value: '+86', label: '中国 (+86) → cn', region: 'cn' },
+  { value: '+1', label: '美国 (+1) → us', region: 'us' },
+  { value: '+44', label: '英国 (+44) → eu', region: 'eu' },
+  { value: '+49', label: '德国 (+49) → eu', region: 'eu' },
+  { value: '+33', label: '法国 (+33) → eu', region: 'eu' },
+  { value: '+81', label: '日本 (+81) → as', region: 'as' },
+  { value: '+82', label: '韩国 (+82) → as', region: 'as' },
+  { value: '+61', label: '澳大利亚 (+61) → us', region: 'us' },
+  { value: '+91', label: '印度 (+91) → as', region: 'as' },
+  { value: '+7', label: '俄罗斯 (+7) → eu', region: 'eu' },
+  { value: '+55', label: '巴西 (+55) → us', region: 'us' },
+  { value: '+65', label: '新加坡 (+65) → as', region: 'as' },
+  { value: '+60', label: '马来西亚 (+60) → as', region: 'as' },
+  { value: '+66', label: '泰国 (+66) → as', region: 'as' },
+  { value: '+84', label: '越南 (+84) → as', region: 'as' },
+  { value: '+62', label: '印度尼西亚 (+62) → as', region: 'as' },
+  { value: '+63', label: '菲律宾 (+63) → as', region: 'as' },
+  { value: '+852', label: '香港 (+852) → as', region: 'as' },
+  { value: '+886', label: '台湾 (+886) → as', region: 'as' },
+  { value: '+853', label: '澳门 (+853) → as', region: 'as' },
 ]
+
+const REGION_NAMES: Record<string, string> = {
+  cn: '中国大陆',
+  us: '美洲',
+  eu: '欧洲',
+  as: '亚洲',
+}
 
 export default function EwelinkAuth() {
   const serverOnline = useAuthStore((s) => s.serverOnline)
   const [platforms, setPlatforms] = useState<PlatformInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
+  const [selectedRegion, setSelectedRegion] = useState('cn')
 
   const [devices, setDevices] = useState<EwelinkDevice[]>([])
   const [devLoading, setDevLoading] = useState(false)
@@ -176,27 +198,63 @@ export default function EwelinkAuth() {
           <Form
             form={form}
             onFinish={handleLogin}
-            layout="inline"
-            style={{ gap: 8, flexWrap: 'wrap' }}
+            layout="vertical"
             initialValues={{ country_code: '+86' }}
           >
-            <Form.Item name="country_code">
-              <Select options={COUNTRY_CODES} style={{ width: 130 }} />
+            <Form.Item
+              name="country_code"
+              label="国家/地区"
+              tooltip="选择您的手机号或账号注册时使用的国家/地区"
+            >
+              <Select
+                options={COUNTRY_CODES}
+                style={{ width: '100%' }}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                onChange={(value) => {
+                  const country = COUNTRY_CODES.find(c => c.value === value)
+                  if (country) setSelectedRegion(country.region)
+                }}
+              />
             </Form.Item>
-            <Form.Item name="email" rules={[{ required: true, message: '请输入邮箱/手机号' }]}>
-              <Input prefix={<UserOutlined />} placeholder="邮箱 / 手机号" style={{ width: 200 }} />
+
+            <div style={{
+              marginBottom: 16,
+              padding: '8px 12px',
+              background: '#f0f5ff',
+              borderRadius: 4,
+              fontSize: 12,
+              color: '#1890ff'
+            }}>
+              <strong>映射区域:</strong> {selectedRegion} ({REGION_NAMES[selectedRegion]})
+            </div>
+
+            <Form.Item
+              name="email"
+              label="邮箱 / 手机号"
+              rules={[{ required: true, message: '请输入邮箱/手机号' }]}
+            >
+              <Input prefix={<UserOutlined />} placeholder="邮箱 / 手机号" />
             </Form.Item>
-            <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password prefix={<LockOutlined />} placeholder="密码" style={{ width: 180 }} />
+
+            <Form.Item
+              name="password"
+              label="密码"
+              rules={[{ required: true, message: '请输入密码' }]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="密码" />
             </Form.Item>
+
             <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loginLoading}>
+              <Button type="primary" htmlType="submit" loading={loginLoading} block>
                 登录
               </Button>
             </Form.Item>
           </Form>
-          <Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12 }}>
-            使用易微联 eWeLink App 注册的账号密码登录，支持自动区域重定向
+          <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>
+            使用易微联 eWeLink App 注册的账号密码登录。系统支持 200+ 个国家/地区的自动区域映射和智能重定向。
           </Text>
         </Card>
       )}
