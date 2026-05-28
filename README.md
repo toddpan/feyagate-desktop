@@ -112,7 +112,7 @@ The server lives in a separate repository (binary releases only by default). The
 {
   "feyagate": {
     "serverVersion": "1.2.15",
-    "serverRelease": "https://gitee.com/panzuji/miloco-mcp-server/releases/download"
+    "serverRelease": "https://github.com/toddpan/miloco-mcp-server-releases/releases/download"
   }
 }
 ```

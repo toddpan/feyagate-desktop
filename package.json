@@ -6,17 +6,17 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "homepage": "https://gitee.com/panzuji/feyagate-desktop",
+  "homepage": "https://github.com/toddpan/feyagate-desktop",
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/panzuji/feyagate-desktop.git"
+    "url": "https://github.com/toddpan/feyagate-desktop.git"
   },
   "bugs": {
-    "url": "https://gitee.com/panzuji/feyagate-desktop/issues"
+    "url": "https://github.com/toddpan/feyagate-desktop/issues"
   },
   "feyagate": {
     "serverVersion": "1.2.15",
-    "serverRelease": "https://gitee.com/panzuji/miloco-mcp-server/releases/download"
+    "serverRelease": "https://github.com/toddpan/miloco-mcp-server-releases/releases/download"
   },
   "scripts": {
     "postinstall": "node scripts/download-server.js",
