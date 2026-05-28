@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a problem with FeyaGate Desktop
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please fill in as much as you can — it helps us reproduce and fix faster.
+  - type: input
+    id: app-version
+    attributes:
+      label: Desktop app version
+      placeholder: e.g. 1.2.15 (Help → About)
+    validations:
+      required: true
+  - type: input
+    id: server-version
+    attributes:
+      label: MCP server version
+      placeholder: e.g. 1.2.15 (Settings → System Info)
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app
+        2. Click ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Drag & drop log files or screenshots. Strip any tokens or device IDs first.

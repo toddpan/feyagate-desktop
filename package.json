@@ -1,11 +1,26 @@
 {
   "name": "feyagate-desktop",
   "version": "1.2.15",
-  "description": "FeyaGate Desktop - Xiaomi MiHome Camera MCP Client",
+  "description": "FeyaGate Desktop — cross-platform Electron client for the FeyaGate MCP server",
   "main": "dist-electron/main.js",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://gitee.com/panzuji/feyagate-desktop",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/panzuji/feyagate-desktop.git"
+  },
+  "bugs": {
+    "url": "https://gitee.com/panzuji/feyagate-desktop/issues"
+  },
+  "feyagate": {
+    "serverVersion": "1.2.15",
+    "serverRelease": "https://gitee.com/panzuji/miloco-mcp-server/releases/download"
+  },
   "scripts": {
+    "postinstall": "node scripts/download-server.js",
+    "server:fetch": "node scripts/download-server.js",
     "dev": "vite",
     "build": "tsc && vite build && tsc -p tsconfig.electron.json",
     "preview": "vite preview",

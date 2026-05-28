@@ -1,6 +1,26 @@
+# Build output
 node_modules/
 dist/
 dist-electron/
 release/
+out/
+
+# OS / IDE
 *.log
 .DS_Store
+.vscode/
+.idea/
+
+# Bundled MCP server (downloaded via scripts/download-server.js)
+resources/server/*
+!resources/server/.gitkeep
+!resources/server/README.md
+
+# User-specific config
+.env
+.env.local
+auth_token.json
+
+# Test/coverage
+coverage/
+.nyc_output/
