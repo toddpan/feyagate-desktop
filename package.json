@@ -1,6 +1,6 @@
 {
   "name": "feyagate-desktop",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "description": "FeyaGate Desktop — cross-platform Electron client for the FeyaGate MCP server",
   "main": "dist-electron/main.js",
   "private": true,
@@ -15,7 +15,7 @@
     "url": "https://github.com/toddpan/feyagate-desktop/issues"
   },
   "feyagate": {
-    "serverVersion": "1.2.15",
+    "serverVersion": "1.2.16",
     "serverRelease": "https://github.com/toddpan/miloco-mcp-server-releases/releases/download"
   },
   "scripts": {
