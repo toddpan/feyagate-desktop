@@ -21,7 +21,7 @@ mac:
   target:
     - dmg
     - zip
-  artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+  artifactName: "FeyaGate-Desktop-v${version}-${os}-${arch}.${ext}"
 dmg:
   contents:
     - x: 410
@@ -35,7 +35,7 @@ win:
   target:
     - nsis
     - zip
-  artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+  artifactName: "FeyaGate-Desktop-v${version}-${os}-${arch}.${ext}"
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -45,4 +45,4 @@ linux:
     - AppImage
     - deb
   category: Utility
-  artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+  artifactName: "FeyaGate-Desktop-v${version}-${os}-${arch}.${ext}"
