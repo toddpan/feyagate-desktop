@@ -15,7 +15,7 @@
     "url": "https://github.com/toddpan/feyagate-desktop/issues"
   },
   "feyagate": {
-    "serverVersion": "1.2.18",
+    "serverVersion": "1.2.17",
     "serverRelease": "https://github.com/toddpan/miloco-mcp-server-releases/releases/download"
   },
   "scripts": {
