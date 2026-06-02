@@ -84,6 +84,7 @@ async function main() {
 
     cleanTarget(TARGET_DIR);
     unzip(zipPath, TARGET_DIR);
+    flattenSingleDir(TARGET_DIR);
 
     const bin = path.join(TARGET_DIR, binaryName());
     if (!fs.existsSync(bin)) {
@@ -173,6 +174,26 @@ function cleanTarget(dir) {
     if (entry === '.gitkeep' || entry === 'README.md') continue;
     fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
   }
+}
+
+// Some release archives wrap everything in a single top-level directory
+// (e.g. miloco-mcp-server-win-x64-v1.2.18/...). If the binary isn't at the
+// root but there's exactly one extracted subdirectory containing it, hoist
+// that dir's contents up one level. Mirrors the skill installer's logic.
+function flattenSingleDir(dir) {
+  if (fs.existsSync(path.join(dir, binaryName()))) return;
+  const entries = fs.readdirSync(dir).filter(
+    (e) => e !== '.gitkeep' && e !== 'README.md'
+  );
+  const subdirs = entries.filter((e) =>
+    fs.statSync(path.join(dir, e)).isDirectory()
+  );
+  if (subdirs.length !== 1) return;
+  const inner = path.join(dir, subdirs[0]);
+  for (const entry of fs.readdirSync(inner)) {
+    fs.renameSync(path.join(inner, entry), path.join(dir, entry));
+  }
+  fs.rmSync(inner, { recursive: true, force: true });
 }
 
 function unzip(zip, dest) {
