@@ -2,7 +2,7 @@ const FOTA_JSON_URL = 'https://oneapi.sooncore.com/ota/fota.json'
 const FOTA_PROXY_PATH = '/ota/fota.json'
 const APP_FOTA_TYPE = 'feyagate-desktop'
 
-const CURRENT_VERSION = '1.2.16'
+const CURRENT_VERSION = '1.2.18'
 
 export interface UpdateInfo {
   version: string
