@@ -431,12 +431,27 @@ export async function xiaoaiControl(deviceId: string, command: string, silence =
 }
 
 // License (virtual gateway device authorization)
+export interface PlatformPolicy {
+  enabled: boolean
+  trial_hours: number
+  trial_remaining_hours: number
+  message: string
+}
+
+export interface Capabilities {
+  edition: string
+  platforms: Record<string, PlatformPolicy>
+  features: Record<string, boolean>
+  message: string
+}
+
 export interface LicenseInfo {
   edition: string       // "free" | "licensed"
   status: string        // "free" | "pending" | "activated"
   product: string       // e.g. "feyagate-linux"
   key_masked: string    // e.g. "FG-ABCD-****-IJKL"
   device_id: string     // 12-char hex device ID
+  capabilities?: Capabilities
   guidance?: {
     message: string
     how_to_authorize: string
