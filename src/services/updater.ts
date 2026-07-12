@@ -33,10 +33,23 @@ function compareVersions(v1: string, v2: string): number {
 }
 
 function getPlatformSuffix(): string {
+  const p = window.feyagate?.platform
+  if (p) {
+    if (p === 'darwin') return 'mac'
+    if (p === 'win32') return 'win'
+    return 'linux'
+  }
   const ua = navigator.userAgent.toLowerCase()
   if (ua.includes('mac')) return 'mac'
   if (ua.includes('win')) return 'win'
   return 'linux'
+}
+
+function getArchSuffix(): string | null {
+  const a = window.feyagate?.arch
+  if (a === 'arm64') return 'arm64'
+  if (a === 'x64' || a === 'ia32') return 'x64'
+  return null // browser mode: UA doesn't reveal arch reliably
 }
 
 async function fetchFotaJson(): Promise<unknown> {
@@ -62,11 +75,20 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
   }
 
   const platform = getPlatformSuffix()
-  const platformType = `${APP_FOTA_TYPE}-${platform}`
+  const arch = getArchSuffix()
 
-  let entry = data.find((e: UpdateInfo) => e.type === platformType)
-  if (!entry) {
-    entry = data.find((e: UpdateInfo) => e.type === APP_FOTA_TYPE)
+  // Priority: exact arch match → x64 (Rosetta-compatible on mac) → legacy names
+  const candidates = [
+    ...(arch ? [`${APP_FOTA_TYPE}-${platform}-${arch}`] : []),
+    `${APP_FOTA_TYPE}-${platform}-x64`,
+    `${APP_FOTA_TYPE}-${platform}`,
+    APP_FOTA_TYPE,
+  ]
+
+  let entry: UpdateInfo | undefined
+  for (const t of candidates) {
+    entry = data.find((e: UpdateInfo) => e.type === t)
+    if (entry) break
   }
 
   if (!entry) {

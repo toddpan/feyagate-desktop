@@ -436,6 +436,8 @@ export interface PlatformPolicy {
   trial_hours: number
   trial_remaining_hours: number
   message: string
+  status?: string // licensed/free/trial_active/trial_expired/subscription_expired
+  trial_remaining_days?: number
 }
 
 export interface Capabilities {
@@ -443,6 +445,16 @@ export interface Capabilities {
   platforms: Record<string, PlatformPolicy>
   features: Record<string, boolean>
   message: string
+  /** 订阅是否有效（含宽限期） */
+  is_subscription_active?: boolean
+  /** 宽限期剩余天数，0=不在宽限期 */
+  grace_period_remaining?: number
+  /** ISO8601 订阅到期时间 */
+  subscription_expires_at?: string
+  /** ISO8601 宽限期结束时间 */
+  grace_period_expires_at?: string
+  /** ISO8601 宽限期开始时间 */
+  grace_period_start_at?: string
 }
 
 export interface LicenseInfo {

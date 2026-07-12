@@ -22,6 +22,7 @@ mac:
     - dmg
     - zip
   artifactName: "FeyaGate-Desktop-v${version}-${os}-${arch}.${ext}"
+afterPack: scripts/patch-miloco.cjs
 dmg:
   contents:
     - x: 410

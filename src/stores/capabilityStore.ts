@@ -6,6 +6,8 @@ interface PlatformState {
   trialHours: number
   trialRemainingHours: number
   message: string
+  status: string // licensed/free/trial_active/trial_expired/subscription_expired
+  trialRemainingDays: number
 }
 
 interface CapabilityState {
@@ -15,6 +17,12 @@ interface CapabilityState {
   features: Record<string, boolean>
   edition: string
   message: string
+  /** 订阅是否有效（含宽限期） */
+  isSubscriptionActive: boolean
+  /** 宽限期剩余天数，0=不在宽限期 */
+  gracePeriodRemaining: number
+  /** ISO8601 订阅到期时间 */
+  subscriptionExpiresAt: string
   loading: boolean
   fetchCapabilities: () => Promise<void>
   /** 某平台是否可用（平台未列出时默认可用） */
@@ -30,6 +38,9 @@ export const useCapabilityStore = create<CapabilityState>((set, get) => ({
   features: {},
   edition: 'free',
   message: '',
+  isSubscriptionActive: false,
+  gracePeriodRemaining: 0,
+  subscriptionExpiresAt: '',
   loading: false,
 
   fetchCapabilities: async () => {
@@ -51,6 +62,8 @@ export const useCapabilityStore = create<CapabilityState>((set, get) => ({
               trialHours: policy.trial_hours ?? 0,
               trialRemainingHours: policy.trial_remaining_hours ?? 0,
               message: policy.message ?? '',
+              status: policy.status ?? '',
+              trialRemainingDays: policy.trial_remaining_days ?? 0,
             }
           }
         }
@@ -60,6 +73,10 @@ export const useCapabilityStore = create<CapabilityState>((set, get) => ({
           features: caps.features ?? {},
           edition: caps.edition ?? info.edition,
           message: caps.message ?? '',
+          // v2 文档 §3.4：订阅到期/宽限期副文案来源
+          isSubscriptionActive: caps.is_subscription_active ?? false,
+          gracePeriodRemaining: caps.grace_period_remaining ?? 0,
+          subscriptionExpiresAt: caps.subscription_expires_at ?? '',
           loading: false,
         })
         return

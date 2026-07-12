@@ -9,21 +9,32 @@ import {
   ExclamationCircleOutlined, DeleteOutlined, InfoCircleOutlined,
 } from '@ant-design/icons'
 import { useLicenseStore } from '../stores/licenseStore'
+import { useCapabilityStore } from '../stores/capabilityStore'
+import { platformStatusInfo, PLATFORM_LABELS } from '../utils/platformStatus'
 
 const { Title, Text, Paragraph } = Typography
 
 export default function LicenseSettings() {
   const {
     edition, status, product, keyMasked, deviceId,
+    subscriptionExpiresAt, gracePeriodRemaining,
     loading, error, fetchStatus, setLicenseKey, clearLicense,
   } = useLicenseStore()
+
+  const platformDetails = useCapabilityStore((s) => s.platformDetails)
+  const fetchCapabilities = useCapabilityStore((s) => s.fetchCapabilities)
+  const capGrace = useCapabilityStore((s) => s.gracePeriodRemaining)
+  const capExpiresAt = useCapabilityStore((s) => s.subscriptionExpiresAt)
 
   const [keyInput, setKeyInput] = useState('')
   const [productInput, setProductInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [messageApi, contextHolder] = message.useMessage()
 
-  const doFetch = useCallback(() => { fetchStatus() }, [fetchStatus])
+  const doFetch = useCallback(() => {
+    fetchStatus()
+    fetchCapabilities()
+  }, [fetchStatus, fetchCapabilities])
 
   useEffect(() => {
     doFetch()
@@ -75,6 +86,17 @@ export default function LicenseSettings() {
   }
 
   const isLicensed = edition === 'licensed'
+  // 订阅到期/宽限期副文案（v2 文档 §3.4）：
+  //   优先用 capabilityStore 的顶层 grace_period_remaining / subscription_expires_at，
+  //   回退到 licenseStore 中的副本（任意一个来源拉到即可）。
+  const effectiveGrace = gracePeriodRemaining || capGrace
+  const effectiveExpiresAt = subscriptionExpiresAt || capExpiresAt
+  const expiryHint = effectiveGrace > 0
+    ? `宽限还剩 ${effectiveGrace} 天`
+    : (effectiveExpiresAt && effectiveExpiresAt.length >= 10
+        ? `到期 ${effectiveExpiresAt.substring(0, 10)}`
+        : '')
+  const isInGrace = effectiveGrace > 0
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
@@ -92,6 +114,25 @@ export default function LicenseSettings() {
           description={error}
           showIcon
           closable
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {/* 订阅到期/宽限期提示（v2 文档 §3.4）：仅 licensed 时展示 */}
+      {isLicensed && isInGrace && (
+        <Alert
+          type="warning"
+          message={`订阅已进入宽限期（${expiryHint}）`}
+          description="到期后 7 天内设备功能仍可用，过期后将恢复为免费版（仅米家）。请尽快续订。"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {isLicensed && !isInGrace && effectiveExpiresAt && (
+        <Alert
+          type="info"
+          message={`订阅有效 · 到期 ${effectiveExpiresAt.substring(0, 10)}`}
+          showIcon
           style={{ marginBottom: 16 }}
         />
       )}
@@ -122,8 +163,8 @@ export default function LicenseSettings() {
             {isLicensed ? (
               <Result
                 status="success"
-                title="已授权"
-                subTitle={product ? `产品: ${product}` : '全平台功能已解锁'}
+                title={product ? `已授权 · ${product}` : '已授权'}
+                subTitle={expiryHint || '全平台功能已解锁'}
                 style={{ padding: '16px 0' }}
               />
             ) : (
@@ -154,6 +195,15 @@ export default function LicenseSettings() {
               {product && (
                 <Descriptions.Item label="产品类型">
                   <Text>{product}</Text>
+                </Descriptions.Item>
+              )}
+              {isLicensed && expiryHint && (
+                <Descriptions.Item label="订阅状态">
+                  {effectiveGrace > 0 ? (
+                    <Tag color="volcano">宽限期内 · {expiryHint}</Tag>
+                  ) : (
+                    <Tag color="processing">{expiryHint}</Tag>
+                  )}
                 </Descriptions.Item>
               )}
               {keyMasked && (
@@ -195,6 +245,37 @@ export default function LicenseSettings() {
             )}
           </>
         )}
+      </Card>
+
+      <Divider />
+
+      {/* Per-platform authorization status */}
+      <Card
+        title={
+          <Space>
+            <SafetyCertificateOutlined />
+            <span>各平台授权状态</span>
+          </Space>
+        }
+      >
+        <Descriptions column={1} size="small" bordered>
+          {['xiaomi', 'tuya', 'midea', 'ewelink'].map((p) => {
+            const d = platformDetails[p]
+            const info = platformStatusInfo(
+              d?.status,
+              d?.trialRemainingDays ?? 0,
+              d?.enabled ?? true,
+            )
+            return (
+              <Descriptions.Item key={p} label={PLATFORM_LABELS[p] || p}>
+                <Space>
+                  <Tag color={info.color}>{info.text}</Tag>
+                  {d?.message && <Text type="secondary">{d.message}</Text>}
+                </Space>
+              </Descriptions.Item>
+            )
+          })}
+        </Descriptions>
       </Card>
 
       <Divider />

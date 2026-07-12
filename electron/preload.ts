@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron') as typeof import('ele
 
 contextBridge.exposeInMainWorld('feyagate', {
   platform: process.platform,
+  arch: process.arch,
 
   mcpCall: (method: string, params?: Record<string, unknown>) =>
     ipcRenderer.invoke('mcp-call', method, params),

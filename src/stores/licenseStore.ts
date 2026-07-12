@@ -7,6 +7,12 @@ interface LicenseState {
   product: string
   keyMasked: string
   deviceId: string
+  /** 订阅到期时间 ISO8601（仅 licensed + 订阅型生效） */
+  subscriptionExpiresAt: string
+  /** 宽限期剩余天数，0=不在宽限期 */
+  gracePeriodRemaining: number
+  /** 宽限期结束时间 ISO8601 */
+  gracePeriodExpiresAt: string
   loading: boolean
   error: string | null
 
@@ -21,6 +27,9 @@ export const useLicenseStore = create<LicenseState>((set) => ({
   product: '',
   keyMasked: '',
   deviceId: '',
+  subscriptionExpiresAt: '',
+  gracePeriodRemaining: 0,
+  gracePeriodExpiresAt: '',
   loading: false,
   error: null,
 
@@ -34,6 +43,9 @@ export const useLicenseStore = create<LicenseState>((set) => ({
         product: info.product,
         keyMasked: info.key_masked,
         deviceId: info.device_id,
+        subscriptionExpiresAt: info.capabilities?.subscription_expires_at ?? '',
+        gracePeriodRemaining: info.capabilities?.grace_period_remaining ?? 0,
+        gracePeriodExpiresAt: info.capabilities?.grace_period_expires_at ?? '',
         loading: false,
       })
     } catch (e) {
@@ -51,6 +63,9 @@ export const useLicenseStore = create<LicenseState>((set) => ({
         product: info.product,
         keyMasked: info.key_masked,
         deviceId: info.device_id,
+        subscriptionExpiresAt: info.capabilities?.subscription_expires_at ?? '',
+        gracePeriodRemaining: info.capabilities?.grace_period_remaining ?? 0,
+        gracePeriodExpiresAt: info.capabilities?.grace_period_expires_at ?? '',
         loading: false,
       })
       return info.edition === 'licensed'
@@ -70,6 +85,9 @@ export const useLicenseStore = create<LicenseState>((set) => ({
         product: info.product,
         keyMasked: info.key_masked,
         deviceId: info.device_id,
+        subscriptionExpiresAt: '',
+        gracePeriodRemaining: 0,
+        gracePeriodExpiresAt: '',
         loading: false,
       })
     } catch (e) {
