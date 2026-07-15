@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Card, Typography, Space, Statistic, Row, Col, Tag, Table, Select,
-  Button, Empty, Spin,
+  Card, Row, Col, Tag, Table, Select,
+  Button, Empty, Spin, Space,
 } from 'antd'
 import {
-  DollarOutlined, SyncOutlined, ApiOutlined,
-  CheckCircleOutlined, CloseCircleOutlined,
+  DollarOutlined, ReloadOutlined, ThunderboltOutlined,
+  ApiOutlined, RiseOutlined, CloseCircleFilled, CheckCircleFilled,
+  FundOutlined,
 } from '@ant-design/icons'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
@@ -15,8 +16,8 @@ import {
   getTokenUsage, getTokenRecords, TokenUsageResult, TokenRecordItem,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
+import { Hero, PageHeader, StatTile } from '../components/ui'
 
-const { Title, Text } = Typography
 const COLORS = ['#1677ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2']
 
 export default function TokenStats() {
@@ -46,7 +47,18 @@ export default function TokenStats() {
     if (serverOnline) fetchData()
   }, [serverOnline, fetchData])
 
-  if (!serverOnline) return <Empty description="MCP Server 离线" />
+  if (!serverOnline) {
+    return (
+      <div className="fg-page">
+        <PageHeader
+          icon={<DollarOutlined />}
+          title="Token 统计"
+          subtitle="查看 AI 调用的 Token 消耗与费用"
+        />
+        <Hero tone="danger" icon={<CloseCircleFilled />} title="MCP Server 离线" />
+      </div>
+    )
+  }
 
   const summary = data?.summary
   const sourceLabel: Record<string, string> = {
@@ -54,162 +66,220 @@ export default function TokenStats() {
     trigger: '触发规则',
   }
 
+  const successRate = summary && summary.total_calls
+    ? Math.round((summary.total_calls - summary.total_failures) / summary.total_calls * 100)
+    : null
+
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <Space align="center" style={{ marginBottom: 16 }}>
-        <DollarOutlined style={{ fontSize: 24 }} />
-        <Title level={3} style={{ margin: 0 }}>Token 消耗统计</Title>
-        <Select
-          value={days}
-          onChange={setDays}
-          style={{ marginLeft: 16 }}
-          options={[
-            { value: 7, label: '最近 7 天' },
-            { value: 30, label: '最近 30 天' },
-            { value: 90, label: '最近 90 天' },
-          ]}
-        />
-        <Button icon={<SyncOutlined spin={loading} />} onClick={fetchData}>刷新</Button>
-      </Space>
+    <div className="fg-page">
+      <PageHeader
+        icon={<DollarOutlined />}
+        title="Token 统计"
+        subtitle={`过去 ${days} 天的 AI 调用 Token 消耗与费用趋势`}
+        extra={
+          <Space>
+            <Select
+              value={days}
+              onChange={setDays}
+              style={{ width: 160 }}
+              options={[
+                { value: 7, label: '最近 7 天' },
+                { value: 30, label: '最近 30 天' },
+                { value: 90, label: '最近 90 天' },
+              ]}
+            />
+            <Button icon={<ReloadOutlined spin={loading} />} onClick={fetchData} loading={loading}>
+              刷新
+            </Button>
+          </Space>
+        }
+      />
 
       {loading && !data ? (
-        <Card><Spin tip="加载中..." /></Card>
+        <Card className="fg-card-antd">
+          <div style={{ padding: 48, textAlign: 'center' }}>
+            <Spin tip="加载中..." />
+          </div>
+        </Card>
       ) : (
         <>
-          {/* Summary Cards */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={6}>
-              <Card><Statistic title="今日消耗" value={summary?.today_tokens ?? 0} suffix="tokens" /></Card>
+          <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+            <Col xs={12} md={6}>
+              <StatTile
+                icon={<ThunderboltOutlined />}
+                tone="info"
+                label="今日消耗"
+                value={(summary?.today_tokens ?? 0).toLocaleString()}
+                suffix="tokens"
+              />
             </Col>
-            <Col span={6}>
-              <Card><Statistic title="本月累计" value={summary?.month_tokens ?? 0} suffix="tokens" /></Card>
+            <Col xs={12} md={6}>
+              <StatTile
+                icon={<RiseOutlined />}
+                label="本月累计"
+                value={(summary?.month_tokens ?? 0).toLocaleString()}
+                suffix="tokens"
+              />
             </Col>
-            <Col span={6}>
-              <Card><Statistic title="总计消耗" value={summary?.total_tokens ?? 0} suffix="tokens" /></Card>
+            <Col xs={12} md={6}>
+              <StatTile
+                icon={<FundOutlined />}
+                tone="warning"
+                label="总计消耗"
+                value={(summary?.total_tokens ?? 0).toLocaleString()}
+                suffix="tokens"
+              />
             </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="预估费用"
-                  value={summary?.estimated_total_cost ?? 0}
-                  precision={4}
-                  prefix="¥"
-                  suffix={<Text type="secondary" style={{ fontSize: 12 }}>(参考)</Text>}
-                />
-              </Card>
+            <Col xs={12} md={6}>
+              <StatTile
+                icon={<DollarOutlined />}
+                tone="success"
+                label="预估费用"
+                value={(summary?.estimated_total_cost ?? 0).toFixed(4)}
+                suffix="¥"
+                trend={successRate != null ? `成功率 ${successRate}%` : '尚无数据'}
+              />
             </Col>
           </Row>
 
-          {/* Daily Trend Chart */}
-          <Card title="每日 Token 消耗趋势" style={{ marginBottom: 16 }}>
+          <Card className="fg-card-antd" title="每日 Token 消耗趋势" style={{ marginBottom: 20 }}>
             {data?.daily?.length ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.daily}>
-                  <XAxis dataKey="date" tickFormatter={(v) => v.slice(5)} />
-                  <YAxis />
-                  <Tooltip formatter={(v) => Number(v).toLocaleString()} />
+                <BarChart data={data.daily} barCategoryGap="32%">
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(v) => v.slice(5)}
+                    tick={{ fill: 'var(--fg-text-tertiary)', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: 'var(--fg-text-tertiary)', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 10, border: '1px solid var(--fg-border)' }}
+                    formatter={(v) => Number(v ?? 0).toLocaleString()}
+                  />
                   <Legend />
-                  <Bar dataKey="prompt_tokens" name="Prompt" stackId="a" fill="#1677ff" />
-                  <Bar dataKey="completion_tokens" name="Completion" stackId="a" fill="#52c41a" />
+                  <Bar dataKey="prompt_tokens" name="Prompt" stackId="a" fill="#1677ff" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="completion_tokens" name="Completion" stackId="a" fill="#52c41a" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <Empty description="暂无数据" />
+              <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             )}
           </Card>
 
-          {/* Model + Source Pie */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={12}>
-              <Card title="模型消耗占比">
+          <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+            <Col xs={24} lg={12}>
+              <Card className="fg-card-antd" title="模型消耗占比">
                 {data?.by_model?.length ? (
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <PieChart>
                       <Pie
                         data={data.by_model}
                         dataKey="total_tokens"
                         nameKey="model"
                         cx="50%" cy="50%"
-                        outerRadius={80}
-                        label={(entry: any) => `${entry.model} ${((entry.percent as number) * 100).toFixed(0)}%`}
+                        outerRadius={90}
+                        label={(entry: { model?: string; percent?: number }) =>
+                          `${entry.model} ${((entry.percent ?? 0) * 100).toFixed(0)}%`
+                        }
                       >
                         {data.by_model.map((_, i) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v) => Number(v).toLocaleString() + ' tokens'} />
+                      <Tooltip formatter={(v) => `${Number(v).toLocaleString()} tokens`} />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : <Empty description="暂无数据" />}
+                ) : <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
               </Card>
             </Col>
-            <Col span={12}>
-              <Card title="来源消耗占比">
+            <Col xs={24} lg={12}>
+              <Card className="fg-card-antd" title="来源消耗占比">
                 {data?.by_source?.length ? (
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <PieChart>
                       <Pie
                         data={data.by_source.map((s) => ({ ...s, label: sourceLabel[s.source] || s.source }))}
                         dataKey="total_tokens"
                         nameKey="label"
                         cx="50%" cy="50%"
-                        outerRadius={80}
-                        label={(entry: any) => `${entry.label} ${((entry.percent as number) * 100).toFixed(0)}%`}
+                        outerRadius={90}
+                        label={(entry: { label?: string; percent?: number }) =>
+                          `${entry.label} ${((entry.percent ?? 0) * 100).toFixed(0)}%`
+                        }
                       >
                         {data.by_source.map((_, i) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v) => Number(v).toLocaleString() + ' tokens'} />
+                      <Tooltip formatter={(v) => `${Number(v).toLocaleString()} tokens`} />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : <Empty description="暂无数据" />}
+                ) : <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
               </Card>
             </Col>
           </Row>
 
-          {/* Call Count Trend */}
-          <Card title="每日调用次数" style={{ marginBottom: 16 }}>
+          <Card className="fg-card-antd" title="每日调用次数" style={{ marginBottom: 20 }}>
             {data?.daily?.length ? (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={data.daily}>
-                  <XAxis dataKey="date" tickFormatter={(v) => v.slice(5)} />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(v) => v.slice(5)}
+                    tick={{ fill: 'var(--fg-text-tertiary)', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: 'var(--fg-text-tertiary)', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--fg-border)' }} />
                   <Legend />
-                  <Line type="monotone" dataKey="calls" name="调用次数" stroke="#1677ff" />
-                  <Line type="monotone" dataKey="failures" name="失败次数" stroke="#f5222d" />
+                  <Line type="monotone" dataKey="calls" name="调用次数" stroke="#1677ff" strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="failures" name="失败次数" stroke="#f5222d" strokeWidth={2.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
-            ) : <Empty description="暂无数据" />}
+            ) : <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
           </Card>
 
-          {/* Recent Records */}
-          <Card title={`调用记录 (最近 ${records.length} 条)`}>
+          <Card
+            className="fg-card-antd"
+            title={`调用记录 (最近 ${records.length} 条)`}
+            bodyStyle={{ padding: 0 }}
+          >
             <Table
               dataSource={records}
               rowKey="id"
-              size="small"
-              pagination={{ pageSize: 10 }}
+              size="middle"
+              pagination={{ pageSize: 10, showSizeChanger: false }}
               columns={[
                 {
                   title: '时间', dataIndex: 'timestamp', width: 160,
                   render: (v: string) => new Date(v).toLocaleString('zh-CN'),
                 },
                 {
-                  title: '来源', dataIndex: 'source', width: 90,
+                  title: '来源', dataIndex: 'source', width: 100,
                   render: (v: string) => <Tag>{sourceLabel[v] || v}</Tag>,
                 },
-                { title: '模型', dataIndex: 'model', width: 140 },
+                { title: '模型', dataIndex: 'model', width: 160 },
                 {
-                  title: 'Tokens', dataIndex: 'total_tokens', width: 100,
+                  title: 'Tokens', dataIndex: 'total_tokens', width: 110,
                   render: (v: number) => v.toLocaleString(),
                 },
                 {
-                  title: '状态', dataIndex: 'success', width: 70,
+                  title: '状态', dataIndex: 'success', width: 80,
                   render: (v: boolean) => v
-                    ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                    : <CloseCircleOutlined style={{ color: '#f5222d' }} />,
+                    ? <CheckCircleFilled style={{ color: 'var(--fg-success)' }} />
+                    : <CloseCircleFilled style={{ color: 'var(--fg-danger)' }} />,
                 },
               ]}
             />

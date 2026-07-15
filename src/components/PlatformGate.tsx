@@ -14,6 +14,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   tuya: '涂鸦',
   midea: '美的',
   ewelink: '易微联',
+  ha: 'Home Assistant',
 }
 
 export default function PlatformGate({ platform, children }: Props) {

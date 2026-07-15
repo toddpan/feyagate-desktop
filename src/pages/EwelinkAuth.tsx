@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Card, Typography, Space, Button, Tag, Empty,
-  Table, Descriptions, message, Popconfirm, Input, Form, Select,
+  Card, Button, Tag, Empty,
+  Table, message, Popconfirm, Input, Form, Select,
+  Space, Row, Col,
 } from 'antd'
 import {
   NodeIndexOutlined, ReloadOutlined, LogoutOutlined,
-  CheckCircleOutlined, CloseCircleOutlined, UserOutlined, LockOutlined,
+  CheckCircleFilled, CloseCircleFilled, UserOutlined, LockOutlined,
+  GlobalOutlined, ClockCircleOutlined,
 } from '@ant-design/icons'
 import {
   getPlatforms, PlatformInfo,
@@ -13,8 +15,7 @@ import {
   getEwelinkDevices, refreshEwelinkDevices, EwelinkDevice,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
-
-const { Title, Text } = Typography
+import { Hero, PageHeader, SoftTag, StatTile } from '../components/ui'
 
 // 扩展的国家码列表（常用国家）
 const COUNTRY_CODES = [
@@ -130,71 +131,95 @@ export default function EwelinkAuth() {
   }
 
   const deviceColumns = [
-    { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '设备ID', dataIndex: 'id', key: 'id', ellipsis: true },
+    { title: '名称', dataIndex: 'name', key: 'name',
+      render: (v: string) => <span style={{ fontWeight: 500 }}>{v || '-'}</span> },
+    { title: '设备 ID', dataIndex: 'id', key: 'id', ellipsis: true },
     { title: '类型', dataIndex: 'type', key: 'type',
       render: (v: string) => <Tag>{v || '-'}</Tag> },
     { title: '状态', dataIndex: 'online', key: 'online',
       render: (v: boolean) => v
-        ? <Tag color="green" icon={<CheckCircleOutlined />}>在线</Tag>
-        : <Tag color="default" icon={<CloseCircleOutlined />}>离线</Tag>
-    },
+        ? <SoftTag tone="success" dot>在线</SoftTag>
+        : <SoftTag tone="default" dot>离线</SoftTag>,
+      width: 100 },
     { title: '品牌', dataIndex: 'brand', key: 'brand',
       render: (v: string) => v || '-' },
     { title: '型号', dataIndex: 'model', key: 'model',
       render: (v: string) => v || '-' },
   ]
 
-  if (!serverOnline) return <Empty description="MCP Server 离线" />
+  if (!serverOnline) {
+    return (
+      <div className="fg-page">
+        <PageHeader icon={<NodeIndexOutlined />} title="易微联" subtitle="eWeLink 智能家居生态账号授权" />
+        <Hero tone="danger" icon={<CloseCircleFilled />} title="MCP Server 离线" />
+      </div>
+    )
+  }
+
+  const authStatus = ewelinkPlatform?.auth_status as Record<string, unknown> | undefined
+  const region = (authStatus?.region as string) || selectedRegion
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="fg-page" style={{ maxWidth: 980, margin: '0 auto' }}>
       {contextHolder}
-      <Space align="center" style={{ marginBottom: 16 }}>
-        <NodeIndexOutlined style={{ fontSize: 24 }} />
-        <Title level={3} style={{ margin: 0 }}>易微联</Title>
-      </Space>
+      <PageHeader
+        icon={<NodeIndexOutlined />}
+        title="易微联"
+        subtitle="登录 eWeLink 账号，便可控制易微联生态中的所有设备"
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()} loading={loading}>
+            刷新
+          </Button>
+        }
+      />
 
-      <Card title="平台状态" loading={loading} style={{ marginBottom: 16 }}>
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="平台">易微联 eWeLink</Descriptions.Item>
-          <Descriptions.Item label="认证状态">
-            {isAuthed
-              ? <Tag color="green">已授权</Tag>
-              : <Tag color="red">未授权</Tag>
-            }
-          </Descriptions.Item>
-          {ewelinkPlatform?.auth_status && (
-            <>
-              <Descriptions.Item label="区域">
-                {(ewelinkPlatform.auth_status as Record<string, string>).region || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Token 剩余">
-                {(ewelinkPlatform.auth_status as Record<string, number>).token_remaining_seconds
-                  ? `${Math.floor(Number((ewelinkPlatform.auth_status as Record<string, number>).token_remaining_seconds) / 86400)} 天`
-                  : '-'
-                }
-              </Descriptions.Item>
-            </>
-          )}
-        </Descriptions>
-
-        <Space style={{ marginTop: 12 }} wrap>
-          {isAuthed && (
-            <>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()}>
-                刷新状态
-              </Button>
-              <Popconfirm title="确定退出易微联平台？" onConfirm={handleLogout}>
+      <div style={{ marginBottom: 20 }}>
+        <Hero
+          tone={isAuthed ? 'success' : 'default'}
+          icon={isAuthed ? <CheckCircleFilled /> : <NodeIndexOutlined />}
+          title={isAuthed ? '已连接易微联账号' : '未授权易微联账号'}
+          description={
+            isAuthed
+              ? `区域 ${region.toUpperCase()} · ${devices.length} 台设备`
+              : '支持 200+ 个国家/地区，自动区域映射与智能重定向'
+          }
+          actions={
+            isAuthed ? (
+              <Popconfirm title="确定退出易微联平台?" onConfirm={handleLogout}>
                 <Button danger icon={<LogoutOutlined />}>退出授权</Button>
               </Popconfirm>
-            </>
-          )}
-        </Space>
-      </Card>
+            ) : null
+          }
+        />
+      </div>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={12} md={6}>
+          <StatTile icon={<NodeIndexOutlined />} tone="info" label="平台" value="易微联" trend="eWeLink / CoolKit" />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
+            tone={isAuthed ? 'success' : 'default'}
+            label="授权状态"
+            value={isAuthed ? '已授权' : '未授权'}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<GlobalOutlined />}
+            label="当前区域"
+            value={region.toUpperCase()}
+            trend={REGION_NAMES[region] || region}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile icon={<ClockCircleOutlined />} label="设备数量" value={devices.length} suffix="台" />
+        </Col>
+      </Row>
 
       {!isAuthed && (
-        <Card title="账号登录" style={{ marginBottom: 16 }}>
+        <Card className="fg-card-antd" title="账号登录" style={{ marginBottom: 20 }}>
           <Form
             form={form}
             onFinish={handleLogin}
@@ -223,10 +248,10 @@ export default function EwelinkAuth() {
             <div style={{
               marginBottom: 16,
               padding: '8px 12px',
-              background: '#f0f5ff',
-              borderRadius: 4,
+              background: 'var(--fg-brand-soft)',
+              borderRadius: 6,
               fontSize: 12,
-              color: '#1890ff'
+              color: 'var(--fg-brand)',
             }}>
               <strong>映射区域:</strong> {selectedRegion} ({REGION_NAMES[selectedRegion]})
             </div>
@@ -248,20 +273,27 @@ export default function EwelinkAuth() {
             </Form.Item>
 
             <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loginLoading} block>
+              <Button type="primary" htmlType="submit" loading={loginLoading} block size="large">
                 登录
               </Button>
             </Form.Item>
+            <div style={{ color: 'var(--fg-text-tertiary)', fontSize: 12, marginTop: 8 }}>
+              使用易微联 eWeLink App 注册的账号密码登录。系统支持 200+ 个国家/地区的自动区域映射和智能重定向。
+            </div>
           </Form>
-          <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>
-            使用易微联 eWeLink App 注册的账号密码登录。系统支持 200+ 个国家/地区的自动区域映射和智能重定向。
-          </Text>
         </Card>
       )}
 
       {isAuthed && (
         <Card
-          title={`易微联设备 (${devices.length})`}
+          className="fg-card-antd"
+          title={
+            <Space>
+              <NodeIndexOutlined /> 易微联设备
+              <Tag>{devices.length}</Tag>
+            </Space>
+          }
+          bodyStyle={{ padding: 0 }}
           extra={
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={devLoading}>
               刷新设备
@@ -273,9 +305,9 @@ export default function EwelinkAuth() {
             columns={deviceColumns}
             rowKey="id"
             loading={devLoading}
-            size="small"
-            pagination={{ pageSize: 20 }}
-            locale={{ emptyText: '暂无设备' }}
+            size="middle"
+            pagination={{ pageSize: 20, showSizeChanger: false }}
+            locale={{ emptyText: <Empty description="暂无设备" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           />
         </Card>
       )}

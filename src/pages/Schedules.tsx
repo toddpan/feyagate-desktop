@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Card, Typography, Space, Button, Tag, Empty, Table, message, Popconfirm,
-  Modal, Form, Input, Select, DatePicker, Checkbox, Descriptions, Badge,
+  Card, Button, Tag, Empty, Table, message, Popconfirm,
+  Modal, Form, Input, Select, DatePicker, Checkbox, Descriptions,
+  Space, Row, Col,
 } from 'antd'
 import {
   ClockCircleOutlined, PlusOutlined, ReloadOutlined,
@@ -14,8 +15,7 @@ import {
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
 import dayjs from 'dayjs'
-
-const { Title, Text } = Typography
+import { PageHeader, SoftTag, StatTile } from '../components/ui'
 
 const REPEAT_OPTIONS = [
   { value: 'none', label: '不重复（一次性）' },
@@ -36,11 +36,11 @@ const WEEKDAY_OPTIONS = [
   { label: '周六', value: 6 },
 ]
 
-const STATUS_MAP: Record<string, { color: string; text: string }> = {
-  pending:   { color: 'blue',    text: '待执行' },
-  completed: { color: 'green',   text: '已完成' },
-  failed:    { color: 'red',     text: '失败' },
-  cancelled: { color: 'default', text: '已取消' },
+const STATUS_MAP: Record<string, { tone: 'default' | 'success' | 'warning' | 'danger' | 'info'; text: string }> = {
+  pending:   { tone: 'info', text: '待执行' },
+  completed: { tone: 'success', text: '已完成' },
+  failed:    { tone: 'danger', text: '失败' },
+  cancelled: { tone: 'default', text: '已取消' },
 }
 
 const REPEAT_LABELS: Record<string, string> = {
@@ -91,7 +91,7 @@ export default function Schedules() {
         time,
         values.tool_name as string,
         values.tool_args as string,
-        values.repeat as string || 'none',
+        (values.repeat as string) || 'none',
         repeatDays
       )
       if (result.success) {
@@ -148,7 +148,7 @@ export default function Schedules() {
     },
     {
       title: '执行时间', dataIndex: 'scheduled_time', key: 'scheduled_time',
-      render: (v: number) => <Text style={{ fontSize: 12 }}>{formatTime(v)}</Text>,
+      render: (v: number) => <span style={{ fontSize: 12, color: 'var(--fg-text-secondary)' }}>{formatTime(v)}</span>,
       width: 170,
     },
     {
@@ -157,35 +157,39 @@ export default function Schedules() {
     },
     {
       title: '重复', dataIndex: 'repeat', key: 'repeat',
-      render: (v: string) => <Tag color={v === 'none' ? 'default' : 'blue'}>{REPEAT_LABELS[v] || v}</Tag>,
+      render: (v: string) => (
+        <SoftTag tone={v === 'none' ? 'default' : 'info'}>
+          {REPEAT_LABELS[v] || v}
+        </SoftTag>
+      ),
       width: 90,
     },
     {
       title: '状态', dataIndex: 'status', key: 'status',
       render: (v: string) => {
-        const s = STATUS_MAP[v] || { color: 'default', text: v }
-        return <Badge status={s.color as 'success' | 'processing' | 'error' | 'default'} text={s.text} />
+        const s = STATUS_MAP[v] || { tone: 'default' as const, text: v }
+        return <SoftTag tone={s.tone} dot>{s.text}</SoftTag>
       },
       width: 90,
     },
     {
       title: '执行次数', dataIndex: 'execute_count', key: 'execute_count',
-      width: 80, align: 'center',
+      width: 90, align: 'center',
     },
     {
-      title: '操作', key: 'actions', width: 160,
+      title: '操作', key: 'actions', width: 180,
       render: (_, record) => (
-        <Space size="small">
+        <Space size={4}>
           <Button type="link" size="small" icon={<InfoCircleOutlined />}
             onClick={() => handleDetail(record.id)}>
             详情
           </Button>
           {record.status === 'pending' && (
-            <Popconfirm title="确定取消？" onConfirm={() => handleCancel(record.id)}>
+            <Popconfirm title="确定取消?" onConfirm={() => handleCancel(record.id)}>
               <Button type="link" size="small" danger icon={<StopOutlined />}>取消</Button>
             </Popconfirm>
           )}
-          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
         </Space>
@@ -193,53 +197,104 @@ export default function Schedules() {
     },
   ]
 
-  if (!serverOnline) return <Empty description="MCP Server 离线" />
+  if (!serverOnline) {
+    return (
+      <div className="fg-page">
+        <PageHeader
+          icon={<ClockCircleOutlined />}
+          title="定时任务"
+          subtitle="按计划自动触发 MCP 工具"
+        />
+        <div className="fg-empty-state">MCP Server 离线</div>
+      </div>
+    )
+  }
 
   const pendingCount = tasks.filter((t) => t.status === 'pending').length
   const completedCount = tasks.filter((t) => t.status === 'completed').length
+  const failedCount = tasks.filter((t) => t.status === 'failed').length
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="fg-page">
       {contextHolder}
-      <Space align="center" style={{ marginBottom: 16 }}>
-        <ClockCircleOutlined style={{ fontSize: 24 }} />
-        <Title level={3} style={{ margin: 0 }}>定时任务</Title>
-        <Tag color="blue">{pendingCount} 待执行</Tag>
-        <Tag color="green">{completedCount} 已完成</Tag>
-      </Space>
 
-      <Card
-        title={`任务列表 (${tasks.length})`}
+      <PageHeader
+        icon={<ClockCircleOutlined />}
+        title="定时任务"
+        subtitle={`${tasks.length} 个任务 · ${pendingCount} 待执行 · ${completedCount} 已完成`}
         extra={
           <Space>
-            <Button icon={<PlusOutlined />} type="primary"
-              onClick={() => setAddVisible(true)}>
-              新建任务
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={fetchTasks} loading={loading}>
+            <Button icon={<RelOutline />} onClick={fetchTasks} loading={loading}>
               刷新
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddVisible(true)}>
+              新建任务
             </Button>
           </Space>
         }
-      >
+      />
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<ClockCircleOutlined />}
+            label="总任务"
+            value={tasks.length}
+            suffix="个"
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<ClockCircleOutlined />}
+            tone="info"
+            label="待执行"
+            value={pendingCount}
+            suffix="个"
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<ClockCircleOutlined />}
+            tone="success"
+            label="已完成"
+            value={completedCount}
+            suffix="个"
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<ClockCircleOutlined />}
+            tone={failedCount > 0 ? 'danger' : 'default'}
+            label="失败"
+            value={failedCount}
+            suffix="个"
+          />
+        </Col>
+      </Row>
+
+      <Card className="fg-card-antd" bodyStyle={{ padding: 0 }}>
         <Table
           dataSource={tasks}
           columns={columns}
           rowKey="id"
           loading={loading}
-          size="small"
-          pagination={{ pageSize: 20 }}
-          locale={{ emptyText: '暂无定时任务' }}
+          size="middle"
+          pagination={{ pageSize: 20, showSizeChanger: false }}
+          locale={{ emptyText: <Empty description="暂无定时任务" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
         />
       </Card>
 
       {/* Add Task Modal */}
       <Modal
-        title="新建定时任务"
+        title={
+          <Space>
+            <PlusOutlined /> 新建定时任务
+          </Space>
+        }
         open={addVisible}
         onCancel={() => { setAddVisible(false); form.resetFields(); setRepeatType('none') }}
         footer={null}
-        width={560}
+        width={580}
       >
         <Form form={form} layout="vertical" onFinish={handleAdd}
           initialValues={{ repeat: 'none' }}>
@@ -251,7 +306,7 @@ export default function Schedules() {
               placeholder="选择执行时间" />
           </Form.Item>
           <Form.Item name="tool_name" label="MCP 工具名" rules={[{ required: true, message: '请输入工具名' }]}>
-            <Input placeholder="如: set_xiaomi_device_property, set_tuya_device_property, set_midea_device_property" />
+            <Input placeholder="如: set_xiaomi_device_property" />
           </Form.Item>
           <Form.Item name="tool_args" label="工具参数 (JSON)" rules={[{ required: true, message: '请输入参数' }]}>
             <Input.TextArea
@@ -267,7 +322,7 @@ export default function Schedules() {
               <Checkbox.Group options={WEEKDAY_OPTIONS} />
             </Form.Item>
           )}
-          <Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={addLoading}>
                 创建任务
@@ -282,19 +337,19 @@ export default function Schedules() {
 
       {/* Task Detail Modal */}
       <Modal
-        title={`任务详情 #${detailTask?.id || ''}`}
+        title={<Space><InfoCircleOutlined />任务详情 #{detailTask?.id}</Space>}
         open={detailVisible}
         onCancel={() => setDetailVisible(false)}
         footer={<Button onClick={() => setDetailVisible(false)}>关闭</Button>}
-        width={600}
+        width={640}
       >
         {detailTask && (
           <Descriptions column={2} size="small" bordered>
             <Descriptions.Item label="名称" span={2}>{detailTask.name}</Descriptions.Item>
             <Descriptions.Item label="状态">
-              <Tag color={STATUS_MAP[detailTask.status]?.color}>
+              <SoftTag tone={STATUS_MAP[detailTask.status]?.tone ?? 'default'} dot>
                 {STATUS_MAP[detailTask.status]?.text || detailTask.status}
-              </Tag>
+              </SoftTag>
             </Descriptions.Item>
             <Descriptions.Item label="重复">
               {REPEAT_LABELS[detailTask.repeat] || detailTask.repeat}
@@ -302,38 +357,39 @@ export default function Schedules() {
             <Descriptions.Item label="执行时间" span={2}>
               {formatTime(detailTask.scheduled_time)}
             </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
-              {formatTime(detailTask.created_at)}
-            </Descriptions.Item>
-            <Descriptions.Item label="上次执行">
-              {formatTime(detailTask.executed_at)}
-            </Descriptions.Item>
-            <Descriptions.Item label="执行次数">
-              {detailTask.execute_count}
-            </Descriptions.Item>
-            <Descriptions.Item label="每日时刻">
-              {detailTask.time_of_day > 0
-                ? `${Math.floor(detailTask.time_of_day / 3600).toString().padStart(2, '0')}:${Math.floor((detailTask.time_of_day % 3600) / 60).toString().padStart(2, '0')}`
-                : '-'}
-            </Descriptions.Item>
             <Descriptions.Item label="工具" span={2}>
               <Tag>{detailTask.tool_name}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="参数" span={2}>
-              <pre style={{ margin: 0, fontSize: 12, maxHeight: 100, overflow: 'auto' }}>
-                {detailTask.tool_args || '-'}
+              <pre className="fg-codeblock light" style={{ maxHeight: 160 }}>
+                {detailTask.tool_args}
               </pre>
             </Descriptions.Item>
-            {detailTask.result && (
-              <Descriptions.Item label="执行结果" span={2}>
-                <pre style={{ margin: 0, fontSize: 12, maxHeight: 120, overflow: 'auto' }}>
-                  {detailTask.result}
-                </pre>
+            {detailTask.repeat_days && detailTask.repeat_days > 0 && (
+              <Descriptions.Item label="自定义星期" span={2}>
+                <Space wrap size={4}>
+                  <Tag>{WEEKDAY_OPTIONS[detailTask.repeat_days]?.label ?? detailTask.repeat_days}</Tag>
+                </Space>
               </Descriptions.Item>
             )}
+            <Descriptions.Item label="创建时间">{formatTime(detailTask.created_at)}</Descriptions.Item>
+            <Descriptions.Item label="上次执行">{formatTime(detailTask.executed_at)}</Descriptions.Item>
+            <Descriptions.Item label="执行次数" span={2}>
+              {detailTask.execute_count}
+              {detailTask.result && (
+                <span style={{ marginLeft: 12, fontSize: 12, color: 'var(--fg-text-tertiary)' }}>
+                  最近结果: {detailTask.result}
+                </span>
+              )}
+            </Descriptions.Item>
           </Descriptions>
         )}
       </Modal>
     </div>
   )
+}
+
+// tiny shim so the JSX above works (we used a custom icon component name in template above)
+function RelOutline() {
+  return <ReloadOutlined />
 }

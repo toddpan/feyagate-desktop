@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
-  Card, Typography, Space, Button, Tag, Empty,
-  Table, Descriptions, message, Popconfirm, Input, Alert,
-  Modal, Steps, Divider, Spin, Result, Select,
+  Card, Button, Tag, Empty,
+  Descriptions, message, Popconfirm, Input, Alert,
+  Modal, Steps, Divider, Spin, Select, Space, Row, Col,
 } from 'antd'
 import {
   CloudOutlined, ReloadOutlined, LoginOutlined,
-  CheckCircleOutlined, CloseCircleOutlined, SwapOutlined,
+  CheckCircleFilled, CloseCircleFilled, SwapOutlined,
   RedoOutlined, ExclamationCircleOutlined, CopyOutlined,
+  GlobalOutlined, ClockCircleOutlined,
 } from '@ant-design/icons'
 import {
   getPlatforms, PlatformInfo,
@@ -15,8 +16,8 @@ import {
   getDeviceList, refreshDevices, Device, getServerUrl,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
-
-const { Title, Text } = Typography
+import { Hero, PageHeader, SoftTag, StatTile } from '../components/ui'
+import { Table } from 'antd'
 
 const isElectron = !!window.feyagate
 
@@ -54,7 +55,9 @@ export default function XiaomiAuth() {
   const [platforms, setPlatforms] = useState<PlatformInfo[]>([])
   const [loading, setLoading] = useState(false)
 
-  const [authStatus, setAuthStatus] = useState<{ authorized: boolean; cloud_server: string; remaining_seconds: number } | null>(null)
+  const [authStatus, setAuthStatus] = useState<
+    { authorized: boolean; cloud_server: string; remaining_seconds: number } | null
+  >(null)
   const [oauthPending, setOauthPending] = useState(false)
   const [manualUrlInput, setManualUrlInput] = useState('')
   const [submittingCode, setSubmittingCode] = useState(false)
@@ -222,126 +225,257 @@ export default function XiaomiAuth() {
   }
 
   const deviceColumns = [
-    { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '设备ID', dataIndex: 'did', key: 'did', ellipsis: true },
-    { title: '型号', dataIndex: 'model', key: 'model',
-      render: (v: string) => <Tag>{v || '-'}</Tag> },
-    { title: '状态', dataIndex: 'online', key: 'online',
+    {
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (v: string) => <span style={{ fontWeight: 500 }}>{v || '-'}</span>,
+    },
+    { title: '设备 ID', dataIndex: 'did', key: 'did', ellipsis: true },
+    {
+      title: '型号',
+      dataIndex: 'model',
+      key: 'model',
+      render: (v: string) => <Tag>{v || '-'}</Tag>,
+    },
+    {
+      title: '状态', dataIndex: 'online', key: 'online',
       render: (v: boolean) => v
-        ? <Tag color="green" icon={<CheckCircleOutlined />}>在线</Tag>
-        : <Tag color="default" icon={<CloseCircleOutlined />}>离线</Tag>
+        ? <SoftTag tone="success" dot>在线</SoftTag>
+        : <SoftTag tone="default" dot>离线</SoftTag>,
+      width: 100,
     },
     { title: '房间', dataIndex: 'room', key: 'room' },
     { title: '家庭', dataIndex: 'home', key: 'home' },
   ]
 
-  if (!serverOnline) return <Empty description="MCP Server 离线" />
+  if (!serverOnline) {
+    return (
+      <div className="fg-page">
+        <PageHeader
+          icon={<CloudOutlined />}
+          title="米家"
+          subtitle="小米 / 米家 智能家居生态账号授权"
+        />
+        <Hero
+          tone="danger"
+          icon={<CloseCircleFilled />}
+          title="MCP Server 离线"
+          description="请先启动本地 MCP Server，连接恢复后此处会自动刷新。"
+        />
+      </div>
+    )
+  }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="fg-page" style={{ maxWidth: 980, margin: '0 auto' }}>
       {contextHolder}
-      <Space align="center" style={{ marginBottom: 16 }}>
-        <CloudOutlined style={{ fontSize: 24 }} />
-        <Title level={3} style={{ margin: 0 }}>米家</Title>
-      </Space>
+      <PageHeader
+        icon={<CloudOutlined />}
+        title="米家授权"
+        subtitle="连接你的小米 / 米家账号，便可控制米家生态中的所有设备"
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()} loading={loading}>
+            刷新
+          </Button>
+        }
+      />
 
-      <Card title="平台状态" loading={loading} style={{ marginBottom: 16 }}>
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="平台">小米米家</Descriptions.Item>
-          <Descriptions.Item label="认证状态">
-            {isAuthed ? <Tag color="green">已授权</Tag> : <Tag color="red">未授权</Tag>}
-          </Descriptions.Item>
-          {authStatus && (
-            <>
-              <Descriptions.Item label="云服务器">
-                {authStatus.cloud_server?.toUpperCase() || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Token 剩余">
-                {authStatus.remaining_seconds > 0
-                  ? formatRemaining(authStatus.remaining_seconds) : '-'}
-              </Descriptions.Item>
-            </>
-          )}
-        </Descriptions>
+      {/* Status Hero */}
+      <div style={{ marginBottom: 20 }}>
+        <Hero
+          tone={isAuthed ? 'success' : 'default'}
+          icon={isAuthed ? <CheckCircleFilled /> : <CloudOutlined />}
+          title={
+            isAuthed
+              ? '已连接米家账号'
+              : '未授权米家账号'
+          }
+          description={
+            isAuthed
+              ? `当前云服务器：${(authStatus?.cloud_server || '').toUpperCase() || '-'} · Token 剩余：${formatRemaining(authStatus?.remaining_seconds ?? 0)}`
+              : '点击下方按钮在弹窗中登录你的米家账号'
+          }
+          actions={
+            isAuthed ? (
+              <Space>
+                <Button icon={<RedoOutlined />} onClick={() => {
+                  Modal.confirm({
+                    title: '重新授权',
+                    icon: <ExclamationCircleOutlined />,
+                    content: '将重新打开小米登录页面，使用当前账号重新授权。',
+                    okText: '重新授权', cancelText: '取消',
+                    onOk: handleStartOAuth,
+                  })
+                }}>
+                  重新授权
+                </Button>
+                <Popconfirm title="确定切换账号？当前授权将清除" onConfirm={async () => {
+                  useAuthStore.setState({ authorized: false, cloudServer: '', remainingSeconds: 0 })
+                  await handleStartOAuth()
+                }}>
+                  <Button danger icon={<SwapOutlined />}>切换账号</Button>
+                </Popconfirm>
+              </Space>
+            ) : null
+          }
+        />
+      </div>
 
-        <Space style={{ marginTop: 12 }} wrap>
-          {!isAuthed && !oauthPending && (
-            <>
+      {/* Stat row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<CloudOutlined />}
+            label="平台"
+            value="米家"
+            trend="小米 / 米家"
+            tone="info"
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
+            tone={isAuthed ? 'success' : 'default'}
+            label="授权状态"
+            value={isAuthed ? '已授权' : '未授权'}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<GlobalOutlined />}
+            label="云服务器"
+            value={(authStatus?.cloud_server || '-').toUpperCase()}
+            trend={selectedRegion ? `当前选择：${selectedRegion.toUpperCase()}` : ''}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<ClockCircleOutlined />}
+            label="Token 剩余"
+            value={authStatus?.remaining_seconds ? formatRemaining(authStatus.remaining_seconds) : '—'}
+            tone={isAuthed ? 'success' : 'default'}
+          />
+        </Col>
+      </Row>
+
+      {/* Login card */}
+      {!isAuthed && !oauthPending && (
+        <Card className="fg-card-antd" title="账号登录" style={{ marginBottom: 20 }}>
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <p style={{ color: 'var(--fg-text-secondary)', marginBottom: 0 }}>
+              选择云服务器区域后，点击下方按钮在弹窗中登录米家账号。
+              授权完成后，弹窗会自动关闭，本页面会自动更新状态。
+            </p>
+            <Space wrap>
               <Select
                 value={selectedRegion}
                 onChange={setSelectedRegion}
                 options={REGION_OPTIONS}
-                style={{ width: 160 }}
+                style={{ width: 200 }}
               />
-              <Button type="primary" icon={<LoginOutlined />} onClick={handleStartOAuth}>
+              <Button
+                type="primary"
+                size="large"
+                icon={<LoginOutlined />}
+                onClick={handleStartOAuth}
+              >
                 使用米家账号登录
               </Button>
-            </>
-          )}
-          {isAuthed && (
-            <>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()}>
-                刷新状态
-              </Button>
-              <Button icon={<RedoOutlined />} onClick={() => {
-                Modal.confirm({
-                  title: '重新授权', icon: <ExclamationCircleOutlined />,
-                  content: '将重新打开小米登录页面，使用当前账号重新授权。',
-                  okText: '重新授权', cancelText: '取消', onOk: handleStartOAuth,
-                })
-              }}>
-                重新授权
-              </Button>
-              <Popconfirm title="确定切换账号？当前授权将清除" onConfirm={async () => {
-                useAuthStore.setState({ authorized: false, cloudServer: '', remainingSeconds: 0 })
-                await handleStartOAuth()
-              }}>
-                <Button danger icon={<SwapOutlined />}>切换账号</Button>
-              </Popconfirm>
-            </>
-          )}
-        </Space>
-      </Card>
-
-      {oauthPending && (
-        <Card title="扫码/登录授权" style={{ marginBottom: 16 }}>
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            <Alert type="info" showIcon message="小米登录页面已在弹窗中打开。如果弹窗被浏览器拦截，请允许后重试。" />
-            <Steps direction="vertical" size="small" current={1} items={[
-              { title: '在弹窗中登录小米账号', status: 'finish' },
-              { title: '复制错误页面的地址', status: 'process',
-                description: <Text>授权后弹窗会显示"无法访问此网站"— 请复制地址栏 URL</Text> },
-              { title: '完成授权', status: 'wait' },
-            ]} />
-            <Card size="small" style={{ background: 'linear-gradient(135deg, #fff7e6 0%, #fff1f0 100%)', border: '2px solid #fa8c16' }}>
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                <Button type="primary" size="large" icon={<CopyOutlined />}
-                  onClick={handlePasteFromClipboard} loading={submittingCode} block
-                  style={{ height: 48, fontSize: 16 }}>
-                  一键粘贴地址并授权
-                </Button>
-                <Divider plain style={{ margin: '4px 0', fontSize: 12 }}>或手动输入</Divider>
-                <Input.TextArea placeholder="粘贴 URL 或输入授权码" value={manualUrlInput}
-                  onChange={(e) => setManualUrlInput(e.target.value)}
-                  autoSize={{ minRows: 2, maxRows: 4 }} allowClear />
-                <Space>
-                  <Button type="primary" icon={<CheckCircleOutlined />}
-                    onClick={handleManualCodeSubmit} loading={submittingCode}
-                    disabled={!manualUrlInput.trim()}>
-                    提交授权码
-                  </Button>
-                  <Button onClick={() => { setOauthPending(false); if (pollRef.current) clearInterval(pollRef.current) }}>取消</Button>
-                </Space>
-              </Space>
-            </Card>
-            <Alert type="success" showIcon message="系统也在自动检测授权状态，完成后会自动跳转。" />
+            </Space>
           </Space>
         </Card>
       )}
 
+      {/* OAuth pending */}
+      {oauthPending && (
+        <Card className="fg-card-antd" title="扫码 / 登录授权" style={{ marginBottom: 20 }}>
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <Alert
+              type="info"
+              showIcon
+              message="小米登录页面已在弹窗中打开。如果弹窗被浏览器拦截，请允许后重试。"
+            />
+            <Steps
+              direction="vertical"
+              size="small"
+              current={1}
+              items={[
+                { title: '在弹窗中登录小米账号', status: 'finish' },
+                {
+                  title: '复制错误页面的地址',
+                  status: 'process',
+                  description: '授权后弹窗会显示"无法访问此网站"— 请复制地址栏 URL',
+                },
+                { title: '完成授权', status: 'wait' },
+              ]}
+            />
+            <Card
+              size="small"
+              style={{
+                background: 'linear-gradient(135deg, #fff7e6 0%, #fff1f0 100%)',
+                border: '2px solid #fa8c16',
+              }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<CopyOutlined />}
+                  onClick={handlePasteFromClipboard}
+                  loading={submittingCode}
+                  block
+                  style={{ height: 48, fontSize: 16 }}
+                >
+                  一键粘贴地址并授权
+                </Button>
+                <Divider plain style={{ margin: '4px 0', fontSize: 12 }}>或手动输入</Divider>
+                <Input.TextArea
+                  placeholder="粘贴 URL 或输入授权码"
+                  value={manualUrlInput}
+                  onChange={(e) => setManualUrlInput(e.target.value)}
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                  allowClear
+                />
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<CheckCircleFilled />}
+                    onClick={handleManualCodeSubmit}
+                    loading={submittingCode}
+                    disabled={!manualUrlInput.trim()}
+                  >
+                    提交授权码
+                  </Button>
+                  <Button onClick={() => {
+                    setOauthPending(false)
+                    if (pollRef.current) clearInterval(pollRef.current)
+                  }}>
+                    取消
+                  </Button>
+                </Space>
+              </Space>
+            </Card>
+            <Alert
+              type="success"
+              showIcon
+              message="系统也在自动检测授权状态，完成后会自动跳转。"
+            />
+          </Space>
+        </Card>
+      )}
+
+      {/* Device list */}
       {isAuthed && (
         <Card
-          title={`米家设备 (${devices.length})`}
+          className="fg-card-antd"
+          title={
+            <Space>
+              <CloudOutlined /> 米家设备
+              <Tag>{devices.length}</Tag>
+            </Space>
+          }
+          bodyStyle={{ padding: 0 }}
           extra={
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={devRefreshing}>
               刷新设备
@@ -353,18 +487,20 @@ export default function XiaomiAuth() {
             columns={deviceColumns}
             rowKey="did"
             loading={devLoading}
-            size="small"
-            pagination={{ pageSize: 20 }}
-            locale={{ emptyText: '暂无设备' }}
+            size="middle"
+            pagination={{ pageSize: 20, showSizeChanger: false }}
+            locale={{ emptyText: <Empty description="暂无设备" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           />
         </Card>
       )}
 
       {!isAuthed && !oauthPending && (
-        <Alert type="info" showIcon
-          message="米家平台未授权"
-          description={'点击"使用米家账号登录"，在弹出的小米登录页面完成 OAuth 授权。'}
+        <Alert
+          type="info"
+          showIcon
           style={{ marginTop: 16 }}
+          message="米家平台未授权"
+          description={'点击「使用米家账号登录」，在弹出的小米登录页面完成 OAuth 授权。'}
         />
       )}
     </div>

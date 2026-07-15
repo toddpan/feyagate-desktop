@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Card, Typography, Space, Button, Tag, Empty,
-  Table, Descriptions, message, Popconfirm, Input, Form, Radio,
+  Card, Button, Tag, Empty,
+  Table, message, Popconfirm, Input, Form, Radio,
+  Space, Row, Col,
 } from 'antd'
 import {
   HomeOutlined, ReloadOutlined, LogoutOutlined,
-  CheckCircleOutlined, CloseCircleOutlined, UserOutlined, LockOutlined,
+  CheckCircleFilled, CloseCircleFilled, UserOutlined, LockOutlined,
+  CloudOutlined, ClockCircleOutlined,
 } from '@ant-design/icons'
 import {
   getPlatforms, PlatformInfo,
@@ -13,8 +15,7 @@ import {
   getMideaDevices, refreshMideaDevices, MideaDevice,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
-
-const { Title, Text } = Typography
+import { Hero, PageHeader, SoftTag, StatTile } from '../components/ui'
 
 export default function MideaAuth() {
   const serverOnline = useAuthStore((s) => s.serverOnline)
@@ -98,69 +99,91 @@ export default function MideaAuth() {
   }
 
   const deviceColumns = [
-    { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '设备ID', dataIndex: 'id', key: 'id', ellipsis: true },
+    { title: '名称', dataIndex: 'name', key: 'name',
+      render: (v: string) => <span style={{ fontWeight: 500 }}>{v || '-'}</span> },
+    { title: '设备 ID', dataIndex: 'id', key: 'id', ellipsis: true },
     { title: '类型', dataIndex: 'type', key: 'type',
       render: (v: string) => <Tag>{v || '-'}</Tag> },
     { title: '状态', dataIndex: 'online', key: 'online',
       render: (v: boolean) => v
-        ? <Tag color="green" icon={<CheckCircleOutlined />}>在线</Tag>
-        : <Tag color="default" icon={<CloseCircleOutlined />}>离线</Tag>
-    },
+        ? <SoftTag tone="success" dot>在线</SoftTag>
+        : <SoftTag tone="default" dot>离线</SoftTag>,
+      width: 100 },
     { title: '型号', dataIndex: 'model_number', key: 'model_number',
       render: (v: string) => v || '-' },
   ]
 
-  if (!serverOnline) return <Empty description="MCP Server 离线" />
+  if (!serverOnline) {
+    return (
+      <div className="fg-page">
+        <PageHeader icon={<HomeOutlined />} title="美的美居" subtitle="美的智能家居生态账号授权" />
+        <Hero tone="danger" icon={<CloseCircleFilled />} title="MCP Server 离线" />
+      </div>
+    )
+  }
+
+  const authStatus = mideaPlatform?.auth_status as Record<string, unknown> | undefined
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="fg-page" style={{ maxWidth: 980, margin: '0 auto' }}>
       {contextHolder}
-      <Space align="center" style={{ marginBottom: 16 }}>
-        <HomeOutlined style={{ fontSize: 24 }} />
-        <Title level={3} style={{ margin: 0 }}>美的美居</Title>
-      </Space>
+      <PageHeader
+        icon={<HomeOutlined />}
+        title="美的美居"
+        subtitle="登录美的账号，便可控制美的美居生态中的所有家电设备"
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()} loading={loading}>
+            刷新
+          </Button>
+        }
+      />
 
-      <Card title="平台状态" loading={loading} style={{ marginBottom: 16 }}>
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="平台">美的美居</Descriptions.Item>
-          <Descriptions.Item label="认证状态">
-            {isAuthed
-              ? <Tag color="green">已授权</Tag>
-              : <Tag color="red">未授权</Tag>
-            }
-          </Descriptions.Item>
-          {mideaPlatform?.auth_status && (
-            <>
-              <Descriptions.Item label="账号">
-                {(mideaPlatform.auth_status as Record<string, string>).account_masked || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Token 剩余">
-                {(mideaPlatform.auth_status as Record<string, number>).token_remaining_seconds
-                  ? `${Math.floor(Number((mideaPlatform.auth_status as Record<string, number>).token_remaining_seconds) / 3600)} 小时`
-                  : '-'
-                }
-              </Descriptions.Item>
-            </>
-          )}
-        </Descriptions>
-
-        <Space style={{ marginTop: 12 }} wrap>
-          {isAuthed && (
-            <>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()}>
-                刷新状态
-              </Button>
-              <Popconfirm title="确定退出美的平台？" onConfirm={handleLogout}>
+      <div style={{ marginBottom: 20 }}>
+        <Hero
+          tone={isAuthed ? 'success' : 'default'}
+          icon={isAuthed ? <CheckCircleFilled /> : <HomeOutlined />}
+          title={isAuthed ? '已连接美的账号' : '未授权美的账号'}
+          description={
+            isAuthed
+              ? `账号 ${(authStatus?.account_masked as string) || '-'} · ${devices.length} 台设备`
+              : '在下方输入账号密码即可登录'
+          }
+          actions={
+            isAuthed ? (
+              <Popconfirm title="确定退出美的平台?" onConfirm={handleLogout}>
                 <Button danger icon={<LogoutOutlined />}>退出授权</Button>
               </Popconfirm>
-            </>
-          )}
-        </Space>
-      </Card>
+            ) : null
+          }
+        />
+      </div>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={12} md={6}>
+          <StatTile icon={<HomeOutlined />} tone="info" label="平台" value="美的美居" trend="Midea / MSmart" />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
+            tone={isAuthed ? 'success' : 'default'}
+            label="授权状态"
+            value={isAuthed ? '已授权' : '未授权'}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<CloudOutlined />}
+            label="已登录账号"
+            value={(authStatus?.account_masked as string) || '—'}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile icon={<ClockCircleOutlined />} label="设备数量" value={devices.length} suffix="台" />
+        </Col>
+      </Row>
 
       {!isAuthed && (
-        <Card title="账号登录" style={{ marginBottom: 16 }}>
+        <Card className="fg-card-antd" title="账号登录" style={{ marginBottom: 20 }}>
           <Form form={form} onFinish={handleLogin} layout="vertical" initialValues={{ cloud: 'meiju' }}>
             <Form.Item
               name="cloud"
@@ -172,29 +195,36 @@ export default function MideaAuth() {
                 <Radio value="msmart">MSmartHome（国际）</Radio>
               </Radio.Group>
             </Form.Item>
-            <Space>
+            <Space wrap>
               <Form.Item name="account" rules={[{ required: true, message: '请输入手机号/邮箱' }]}>
-                <Input prefix={<UserOutlined />} placeholder="手机号 / 邮箱" style={{ width: 200 }} />
+                <Input prefix={<UserOutlined />} placeholder="手机号 / 邮箱" style={{ width: 240 }} />
               </Form.Item>
               <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-                <Input.Password prefix={<LockOutlined />} placeholder="密码" style={{ width: 180 }} />
+                <Input.Password prefix={<LockOutlined />} placeholder="密码" style={{ width: 220 }} />
               </Form.Item>
               <Form.Item>
-                <Button type="primary" htmlType="submit" loading={loginLoading}>
+                <Button type="primary" htmlType="submit" loading={loginLoading} size="large">
                   登录
                 </Button>
               </Form.Item>
             </Space>
+            <div style={{ color: 'var(--fg-text-tertiary)', marginTop: 12, fontSize: 12 }}>
+              美的美居：中国区域用户 | MSmartHome：国际区域用户（自动路由到所在区域）
+            </div>
           </Form>
-          <Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12 }}>
-            美的美居：中国区域用户 | MSmartHome：国际区域用户（自动路由到所在区域）
-          </Text>
         </Card>
       )}
 
       {isAuthed && (
         <Card
-          title={`美的设备 (${devices.length})`}
+          className="fg-card-antd"
+          title={
+            <Space>
+              <HomeOutlined /> 美的设备
+              <Tag>{devices.length}</Tag>
+            </Space>
+          }
+          bodyStyle={{ padding: 0 }}
           extra={
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={devLoading}>
               刷新设备
@@ -206,9 +236,9 @@ export default function MideaAuth() {
             columns={deviceColumns}
             rowKey="id"
             loading={devLoading}
-            size="small"
-            pagination={{ pageSize: 20 }}
-            locale={{ emptyText: '暂无设备' }}
+            size="middle"
+            pagination={{ pageSize: 20, showSizeChanger: false }}
+            locale={{ emptyText: <Empty description="暂无设备" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           />
         </Card>
       )}

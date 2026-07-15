@@ -1,24 +1,25 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Card, Typography, Space, Button, Input, Tag, Empty, message, Modal,
-  Form, Result, Spin, List, Popconfirm, Segmented, Badge, Tooltip,
+  Button, Input, Empty, message, Modal,
+  Form, Spin, Row, Col, Space,
 } from 'antd'
 import {
-  ThunderboltOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined,
-  EditOutlined, EyeOutlined, TagOutlined,
+  PlusOutlined, ReloadOutlined, DeleteOutlined,
+  EditOutlined, EyeOutlined, ThunderboltOutlined,
+  TagOutlined, FilterOutlined, BookOutlined,
 } from '@ant-design/icons'
 import {
   skillList, skillRead, skillCreate, skillUpdate, skillDelete, skillReload,
   SkillItem, SkillDetail,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
+import { PageHeader, SoftTag } from '../components/ui'
 
-const { Title, Text, Paragraph } = Typography
 const { TextArea } = Input
 
-const SOURCE_COLORS: Record<string, string> = {
-  builtin: 'blue',
-  user: 'green',
+const SOURCE_LABEL: Record<string, string> = {
+  builtin: '内置',
+  user: '自定义',
 }
 
 export default function Skills() {
@@ -27,18 +28,14 @@ export default function Skills() {
   const [skills, setSkills] = useState<SkillItem[]>([])
   const [filter, setFilter] = useState<string>('all')
 
-  // View modal
   const [viewVisible, setViewVisible] = useState(false)
   const [viewDetail, setViewDetail] = useState<SkillDetail | null>(null)
 
-  // Create/Edit modal
   const [editVisible, setEditVisible] = useState(false)
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create')
   const [editName, setEditName] = useState('')
   const [editContent, setEditContent] = useState('')
   const [editSaving, setEditSaving] = useState(false)
-
-  const [form] = Form.useForm()
 
   const loadSkills = useCallback(async () => {
     setLoading(true)
@@ -56,7 +53,16 @@ export default function Skills() {
   }, [serverOnline, loadSkills])
 
   if (!serverOnline) {
-    return <Result status="warning" title="MCP Server 离线" subTitle="请先启动 MCP Server" />
+    return (
+      <div className="fg-page">
+        <PageHeader
+          icon={<ThunderboltOutlined />}
+          title="技能"
+          subtitle="自定义 AI 指令与场景能力"
+        />
+        <div className="fg-empty-state">MCP Server 离线</div>
+      </div>
+    )
   }
 
   const handleView = async (name: string) => {
@@ -83,7 +89,6 @@ tags: ["scene"]
 
 在这里编写技能指令...
 `)
-    form.resetFields()
     setEditVisible(true)
   }
 
@@ -93,7 +98,6 @@ tags: ["scene"]
       setEditMode('edit')
       setEditName(name)
       setEditContent(detail.content)
-      form.setFieldsValue({ name, content: detail.content })
       setEditVisible(true)
     } catch (e: unknown) {
       message.error('读取技能失败: ' + (e instanceof Error ? e.message : '未知错误'))
@@ -156,114 +160,155 @@ tags: ["scene"]
     }
   }
 
-  const filteredSkills = skills
+  const builtinCount = skills.filter((s) => s.source === 'builtin').length
+  const customCount = skills.filter((s) => s.source === 'user').length
 
   return (
-    <Spin spinning={loading}>
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+    <div className="fg-page">
+      <PageHeader
+        icon={<ThunderboltOutlined />}
+        title="技能"
+        subtitle={`共 ${skills.length} 个技能 · ${builtinCount} 内置 · ${customCount} 自定义`}
+        extra={
           <Space>
-            <ThunderboltOutlined style={{ fontSize: 20 }} />
-            <Title level={4} style={{ margin: 0 }}>技能管理</Title>
-            <Tag>{skills.length} 个技能</Tag>
-          </Space>
-          <Space>
-            <Segmented
-              value={filter}
-              onChange={(v) => setFilter(v as string)}
-              options={[
-                { label: '全部', value: 'all' },
-                { label: '内置', value: 'builtin' },
-                { label: '自定义', value: 'user' },
-              ]}
-            />
-            <Button icon={<ReloadOutlined />} onClick={handleReload}>刷新</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReload}>刷新缓存</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
               新建技能
             </Button>
           </Space>
-        </Space>
+        }
+      />
 
-        {filteredSkills.length === 0 ? (
-          <Empty description="暂无技能" />
+      <div className="fg-toolbar">
+        <div className="left">
+          <SoftTag tone="info">
+            <FilterOutlined style={{ marginRight: 4 }} />
+            {filter === 'all' && '全部'}
+            {filter === 'builtin' && '内置'}
+            {filter === 'user' && '自定义'}
+          </SoftTag>
+        </div>
+        <div className="right">
+          <Space>
+            {[
+              { k: 'all', label: '全部' },
+              { k: 'builtin', label: '内置' },
+              { k: 'user', label: '自定义' },
+            ].map((opt) => (
+              <Button
+                key={opt.k}
+                type={filter === opt.k ? 'primary' : 'default'}
+                onClick={() => setFilter(opt.k)}
+                size="small"
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </Space>
+        </div>
+      </div>
+
+      <Spin spinning={loading}>
+        {skills.length === 0 ? (
+          <div className="fg-empty-state">
+            <BookOutlined style={{ fontSize: 36, marginBottom: 12 }} />
+            <div>暂无技能</div>
+            <div style={{ marginTop: 12, fontSize: 13 }}>点击右上角「新建技能」开始编写你的第一个自定义技能</div>
+          </div>
         ) : (
-          <List
-            grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 2, xl: 3 }}
-            dataSource={filteredSkills}
-            renderItem={(item) => (
-              <List.Item>
-                <Card
-                  size="small"
-                  hoverable
-                  title={
-                    <Space>
-                      <Text strong>{item.name}</Text>
-                      <Tag color={SOURCE_COLORS[item.source] || 'default'}>
-                        {item.source === 'builtin' ? '内置' : '自定义'}
-                      </Tag>
-                      {item.always && (
-                        <Tooltip title="此技能始终激活，上下文中自动加载">
-                          <Badge status="processing" text={<Text type="success" style={{ fontSize: 12 }}>常驻</Text>} />
-                        </Tooltip>
-                      )}
-                    </Space>
-                  }
-                  actions={[
-                    <Tooltip key="view" title="查看"><EyeOutlined onClick={() => handleView(item.name)} /></Tooltip>,
-                    ...(item.source === 'user' ? [
-                      <Tooltip key="edit" title="编辑"><EditOutlined onClick={() => handleOpenEdit(item.name)} /></Tooltip>,
-                      <Popconfirm
-                        key="del"
-                        title={`删除技能 "${item.name}"？`}
-                        onConfirm={() => handleDelete(item.name)}
-                      >
-                        <Tooltip title="删除"><DeleteOutlined style={{ color: '#ff4d4f' }} /></Tooltip>
-                      </Popconfirm>,
-                    ] : []),
-                  ]}
-                >
-                  <Paragraph
-                    ellipsis={{ rows: 2 }}
-                    style={{ fontSize: 13, color: '#666', marginBottom: 8 }}
-                  >
-                    {item.description}
-                  </Paragraph>
+          <Row gutter={[16, 16]}>
+            {skills.map((item) => (
+              <Col xs={24} sm={12} md={12} lg={8} key={item.name}>
+                <div className="fg-skill-card">
+                  <div className="head">
+                    <span className="name">{item.name}</span>
+                    <SoftTag tone={item.source === 'builtin' ? 'info' : 'success'}>
+                      {SOURCE_LABEL[item.source] ?? item.source}
+                    </SoftTag>
+                    {item.always && (
+                      <SoftTag tone="warning">常驻</SoftTag>
+                    )}
+                  </div>
+                  <div className="desc">{item.description}</div>
                   {item.tags?.length > 0 && (
-                    <Space wrap size={4}>
+                    <div className="tags">
                       {item.tags.map((t) => (
-                        <Tag key={t} style={{ fontSize: 11 }} icon={<TagOutlined />}>{t}</Tag>
+                        <SoftTag tone="default" key={t}>
+                          <TagOutlined style={{ marginRight: 2 }} />
+                          {t}
+                        </SoftTag>
                       ))}
-                    </Space>
+                    </div>
                   )}
-                </Card>
-              </List.Item>
-            )}
-          />
+                  <div className="actions">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={() => handleView(item.name)}
+                    >
+                      查看
+                    </Button>
+                    {item.source === 'user' && (
+                      <>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => handleOpenEdit(item.name)}
+                        >
+                          编辑
+                        </Button>
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            Modal.confirm({
+                              title: `删除技能 "${item.name}"?`,
+                              okText: '删除',
+                              okType: 'danger',
+                              cancelText: '取消',
+                              onOk: () => handleDelete(item.name),
+                            })
+                          }}
+                        >
+                          删除
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </Col>
+            ))}
+          </Row>
         )}
-      </Space>
+      </Spin>
 
       {/* View Modal */}
       <Modal
-        title={viewDetail ? `技能: ${viewDetail.name}` : '技能详情'}
+        title={<Space><EyeOutlined />{viewDetail?.name ?? '技能详情'}</Space>}
         open={viewVisible}
         onCancel={() => setViewVisible(false)}
         footer={null}
-        width={700}
+        width={720}
       >
         {viewDetail && (
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
             <Space wrap>
-              <Tag color={SOURCE_COLORS[viewDetail.source]}>{viewDetail.source === 'builtin' ? '内置' : '自定义'}</Tag>
-              {viewDetail.always && <Tag color="green">常驻</Tag>}
-              {viewDetail.tags?.map((t) => <Tag key={t}>{t}</Tag>)}
+              <SoftTag tone={viewDetail.source === 'builtin' ? 'info' : 'success'}>
+                {SOURCE_LABEL[viewDetail.source]}
+              </SoftTag>
+              {viewDetail.always && <SoftTag tone="warning">常驻</SoftTag>}
+              {viewDetail.tags?.map((t) => (
+                <SoftTag tone="default" key={t}>{t}</SoftTag>
+              ))}
             </Space>
-            <Text type="secondary">{viewDetail.description}</Text>
-            <pre style={{
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              background: '#fafafa', padding: 12, borderRadius: 6,
-              fontSize: 13, maxHeight: 500, overflow: 'auto',
-              border: '1px solid #f0f0f0',
-            }}>
+            <div style={{ color: 'var(--fg-text-secondary)', fontSize: 13 }}>
+              {viewDetail.description}
+            </div>
+            <pre className="fg-codeblock light">
               {viewDetail.body || viewDetail.content}
             </pre>
           </Space>
@@ -272,28 +317,33 @@ tags: ["scene"]
 
       {/* Create/Edit Modal */}
       <Modal
-        title={editMode === 'create' ? '新建技能' : `编辑技能: ${editName}`}
+        title={
+          <Space>
+            {editMode === 'create' ? <PlusOutlined /> : <EditOutlined />}
+            {editMode === 'create' ? '新建技能' : `编辑技能: ${editName}`}
+          </Space>
+        }
         open={editVisible}
         onCancel={() => setEditVisible(false)}
         onOk={handleSave}
         confirmLoading={editSaving}
         okText="保存"
         cancelText="取消"
-        width={700}
+        width={760}
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Text type="secondary">
-            技能文件使用 Markdown 格式 + YAML frontmatter（name, description, always, tags）
-          </Text>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ fontSize: 13, color: 'var(--fg-text-secondary)' }}>
+            技能文件使用 Markdown 格式 + YAML frontmatter（<code className="fg-mono">name, description, always, tags</code>）
+          </div>
           <TextArea
             rows={20}
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            style={{ fontFamily: 'monospace', fontSize: 13 }}
+            style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13 }}
             placeholder={`---\nname: my-skill\ndescription: "技能描述"\nalways: false\ntags: ["scene"]\n---\n\n# 技能内容\n\n...`}
           />
         </Space>
       </Modal>
-    </Spin>
+    </div>
   )
 }

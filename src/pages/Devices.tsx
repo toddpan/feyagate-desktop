@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Card, Input, Button, Row, Col, Space, Typography,
-  Spin, Alert, Empty, Tag, Statistic, Tooltip, Select,
+  Input, Button, Row, Col, Space, Spin, Alert, Empty, Select,
+  Card,
 } from 'antd'
 import {
-  ReloadOutlined, SearchOutlined, WifiOutlined, HomeOutlined,
+  ReloadOutlined, SearchOutlined, WifiOutlined,
   CameraOutlined, BulbOutlined, LockOutlined, SoundOutlined,
-  DesktopOutlined, AppstoreOutlined, CloudOutlined,
+  DesktopOutlined, AppstoreOutlined, HomeOutlined,
 } from '@ant-design/icons'
 import { useDeviceStore } from '../stores/deviceStore'
 import type { UnifiedDevice } from '../stores/deviceStore'
@@ -14,15 +14,8 @@ import { useAuthStore } from '../stores/authStore'
 import { getPlatforms, PlatformInfo } from '../services/mcp-client'
 import StatusBadge from '../components/StatusBadge'
 import { useNavigate } from 'react-router-dom'
-
-const { Text } = Typography
-
-const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
-  xiaomi:  { label: '米家',   color: '#ff6900' },
-  tuya:    { label: '涂鸦',   color: '#1890ff' },
-  midea:   { label: '美的',   color: '#52c41a' },
-  ewelink: { label: '易微联', color: '#722ed1' },
-}
+import { PageHeader, SoftTag } from '../components/ui'
+import { PLATFORM_PRESET } from '../components/ui/PlatformBadge'
 
 const modelIcons: Record<string, React.ReactNode> = {
   camera: <CameraOutlined />,
@@ -91,71 +84,107 @@ export default function Devices() {
   }
 
   if (!serverOnline) {
-    return <Empty description="MCP 服务器未连接" />
+    return (
+      <div className="fg-page">
+        <PageHeader
+          icon={<AppstoreOutlined />}
+          title="设备列表"
+          subtitle="管理已绑定到网关的所有智能设备"
+        />
+        <div className="fg-empty-state">
+          <WifiOutlined />
+          <div>MCP 服务器未连接</div>
+          <Button style={{ marginTop: 16 }} type="primary" onClick={fetchDevices}>
+            重试连接
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (authedPlatforms.length === 0 && !loading) {
     return (
-      <Empty description="暂无已授权的平台">
-        <Button type="primary" onClick={() => navigate('/platform/xiaomi')}>
-          去授权平台
-        </Button>
-      </Empty>
+      <div className="fg-page">
+        <PageHeader
+          icon={<AppstoreOutlined />}
+          title="设备列表"
+          subtitle="管理已绑定到网关的所有智能设备"
+        />
+        <div className="fg-empty-state">
+          <AppstoreOutlined />
+          <div style={{ fontSize: 15, color: 'var(--fg-text-secondary)' }}>暂无已授权的平台</div>
+          <div style={{ marginBottom: 16 }}>请先完成米家、涂鸦等任一平台的账号授权</div>
+          <Button type="primary" onClick={() => navigate('/platform/xiaomi')}>
+            去授权平台
+          </Button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      {error && <Alert message={error} type="error" showIcon closable />}
+    <div className="fg-page">
+      <PageHeader
+        icon={<AppstoreOutlined />}
+        title="设备列表"
+        subtitle={`共 ${totalCount} 台设备 · ${onlineCount} 台在线 · ${cameraCount} 个摄像头`}
+        extra={
+          <Button
+            icon={<ReloadOutlined spin={refreshing} />}
+            onClick={refreshDevices}
+            loading={refreshing}
+          >
+            刷新
+          </Button>
+        }
+      />
 
-      <Card size="small">
-        <Row gutter={16} align="middle">
+      {error && (
+        <Alert
+          message={error}
+          type="error"
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      <Card className="fg-card-antd" style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle">
           <Col flex="auto">
-            <Space size="large" wrap>
-              <Statistic title="总设备" value={totalCount} />
-              <Statistic title="在线" value={onlineCount} valueStyle={{ color: '#52c41a' }} />
-              {Object.entries(platformCounts).map(([p, count]) => (
-                <Statistic
-                  key={p}
-                  title={PLATFORM_LABELS[p]?.label || p}
-                  value={count}
-                  prefix={<CloudOutlined style={{ color: PLATFORM_LABELS[p]?.color }} />}
-                />
-              ))}
-            </Space>
-          </Col>
-          <Col>
-            <Space wrap>
+            <Space wrap size={[12, 8]}>
               <Select
                 value={platformFilter || undefined}
                 placeholder="全部平台"
                 allowClear
                 onChange={(v) => setPlatformFilter(v || '')}
-                style={{ width: 130 }}
-                options={[
-                  ...Object.entries(PLATFORM_LABELS)
-                    .filter(([key]) => platformCounts[key])
-                    .map(([key, { label }]) => ({
-                      value: key,
-                      label: `${label} (${platformCounts[key]})`,
-                    })),
-                ]}
+                style={{ width: 160 }}
+                options={Object.entries(PLATFORM_PRESET)
+                  .filter(([key]) => platformCounts[key])
+                  .map(([key, { label }]) => ({
+                    value: key,
+                    label: `${label} (${platformCounts[key]})`,
+                  }))}
               />
               <Input
-                placeholder="搜索设备、型号、房间..."
+                placeholder="搜索设备名 / 型号 / 房间..."
                 prefix={<SearchOutlined />}
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 allowClear
-                style={{ width: 220 }}
+                style={{ width: 260 }}
               />
-              <Button
-                icon={<ReloadOutlined spin={refreshing} />}
-                onClick={refreshDevices}
-                loading={refreshing}
-              >
-                刷新
-              </Button>
+              <SoftTag tone="success" dot>
+                {onlineCount} 在线
+              </SoftTag>
+              <SoftTag tone="default" dot>
+                {totalCount - onlineCount} 离线
+              </SoftTag>
+              {cameraCount > 0 ? (
+                <SoftTag tone="info" dot>
+                  {cameraCount} 摄像头
+                </SoftTag>
+              ) : null}
             </Space>
           </Col>
         </Row>
@@ -163,69 +192,58 @@ export default function Devices() {
 
       <Spin spinning={loading}>
         {displayDevices.length === 0 ? (
-          <Empty description={searchKeyword || platformFilter ? '未找到匹配设备' : '暂无设备'} />
+          <div className="fg-empty-state">
+            <SearchOutlined />
+            <div>{searchKeyword || platformFilter ? '未找到匹配设备' : '暂无设备'}</div>
+          </div>
         ) : (
-          <Row gutter={[12, 12]}>
+          <Row gutter={[16, 16]}>
             {displayDevices.map((device: UnifiedDevice) => {
-              const pInfo = PLATFORM_LABELS[device.platform]
+              const preset = PLATFORM_PRESET[device.platform]
+              const color = preset?.color ?? 'var(--fg-border-strong)'
+              const cam = isCamera(device.model)
               return (
-                <Col xs={24} sm={12} md={8} lg={6} key={`${device.platform}-${device.id}`}>
-                  <Card
-                    size="small"
-                    hoverable={isCamera(device.model)}
-                    onClick={
-                      isCamera(device.model)
-                        ? () => navigate('/cameras')
-                        : undefined
-                    }
-                    style={{
-                      borderLeft: `3px solid ${
-                        isCamera(device.model)
-                          ? '#1677ff'
-                          : device.online
-                            ? pInfo?.color || '#52c41a'
-                            : '#d9d9d9'
-                      }`,
+                <Col xs={24} sm={12} md={8} lg={6} xl={4} key={`${device.platform}-${device.id}`}>
+                  <div
+                    className={`fg-device-card ${cam ? 'hoverable' : ''}`}
+                    style={{ '--pc': device.online ? color : 'var(--fg-border-strong)' } as React.CSSProperties}
+                    onClick={cam ? () => navigate('/cameras') : undefined}
+                    role={cam ? 'button' : undefined}
+                    tabIndex={cam ? 0 : undefined}
+                    onKeyDown={(e) => {
+                      if (!cam) return
+                      if (e.key === 'Enter' || e.key === ' ') navigate('/cameras')
                     }}
                   >
-                    <Space direction="vertical" size={2} style={{ width: '100%' }}>
-                      <Space>
-                        <span style={{ fontSize: 18 }}>{getDeviceIcon(device.model)}</span>
-                        <Text strong ellipsis style={{ maxWidth: 120 }}>
-                          {device.name}
-                        </Text>
-                        <StatusBadge online={device.online} size="small" />
-                      </Space>
-                      <Tooltip title={device.model}>
-                        <Text type="secondary" ellipsis style={{ fontSize: 12, maxWidth: '100%' }}>
-                          {device.model || '-'}
-                        </Text>
-                      </Tooltip>
-                      <Space size={4} wrap>
-                        <Tag
-                          color={pInfo?.color}
-                          bordered={false}
-                          style={{ fontSize: 11 }}
-                        >
-                          {pInfo?.label || device.platform}
-                        </Tag>
-                        {(device.room_name || device.home_name) && (
-                          <Tag icon={<HomeOutlined />} bordered={false} color="default">
-                            {device.room_name || device.home_name}
-                          </Tag>
-                        )}
-                        {isCamera(device.model) && (
-                          <Tag color="blue" bordered={false}>摄像头</Tag>
-                        )}
-                      </Space>
-                    </Space>
-                  </Card>
+                    <div className="head">
+                      <span className={`icon ${!device.online ? 'offline' : ''}`}>
+                        {getDeviceIcon(device.model)}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="name" title={device.name}>{device.name}</div>
+                        <div className="model" title={device.model}>
+                          {device.model || preset?.label || device.platform}
+                        </div>
+                      </div>
+                      <StatusBadge online={device.online} size="small" />
+                    </div>
+                    <div className="meta">
+                      <SoftTag tone="default">{preset?.label ?? device.platform}</SoftTag>
+                      {(device.room_name || device.home_name) && (
+                        <SoftTag tone="default">
+                          <HomeOutlined style={{ marginRight: 2 }} />
+                          {device.room_name || device.home_name}
+                        </SoftTag>
+                      )}
+                      {cam && <SoftTag tone="info">摄像头</SoftTag>}
+                    </div>
+                  </div>
                 </Col>
               )
             })}
           </Row>
         )}
       </Spin>
-    </Space>
+    </div>
   )
 }

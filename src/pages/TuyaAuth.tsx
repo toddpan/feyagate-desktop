@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
-  Card, Typography, Space, Button, Alert, Tag, Spin, Empty,
-  Table, Descriptions, message, Popconfirm, QRCode, Result, Input,
+  Card, Button, Tag, Spin, Empty,
+  Table, message, Popconfirm, QRCode, Alert, Input,
+  Space, Row, Col,
 } from 'antd'
 import {
   CloudOutlined, QrcodeOutlined, ReloadOutlined,
-  LogoutOutlined, CheckCircleOutlined, CloseCircleOutlined, UserOutlined,
+  LogoutOutlined, CheckCircleFilled, CloseCircleFilled,
+  UserOutlined, GlobalOutlined, ClockCircleOutlined,
 } from '@ant-design/icons'
 import {
   getPlatforms, PlatformInfo,
@@ -13,8 +15,7 @@ import {
   getTuyaDevices, refreshTuyaDevices, TuyaDevice,
 } from '../services/mcp-client'
 import { useAuthStore } from '../stores/authStore'
-
-const { Title, Text } = Typography
+import { Hero, PageHeader, SoftTag, StatTile } from '../components/ui'
 
 export default function TuyaAuth() {
   const serverOnline = useAuthStore((s) => s.serverOnline)
@@ -145,103 +146,149 @@ export default function TuyaAuth() {
   }
 
   const deviceColumns = [
-    { title: '名称', dataIndex: 'name', key: 'name' },
-    { title: '设备ID', dataIndex: 'id', key: 'id', ellipsis: true },
+    { title: '名称', dataIndex: 'name', key: 'name',
+      render: (v: string) => <span style={{ fontWeight: 500 }}>{v || '-'}</span> },
+    { title: '设备 ID', dataIndex: 'id', key: 'id', ellipsis: true },
     { title: '类型', dataIndex: 'category', key: 'category',
       render: (v: string) => <Tag>{v || '-'}</Tag> },
     { title: '状态', dataIndex: 'online', key: 'online',
       render: (v: boolean) => v
-        ? <Tag color="green" icon={<CheckCircleOutlined />}>在线</Tag>
-        : <Tag color="default" icon={<CloseCircleOutlined />}>离线</Tag>
-    },
+        ? <SoftTag tone="success" dot>在线</SoftTag>
+        : <SoftTag tone="default" dot>离线</SoftTag>,
+      width: 100 },
     { title: '房间', dataIndex: 'room_name', key: 'room_name' },
     { title: '家庭', dataIndex: 'home_name', key: 'home_name' },
   ]
 
-  if (!serverOnline) return <Empty description="MCP Server 离线" />
+  if (!serverOnline) {
+    return (
+      <div className="fg-page">
+        <PageHeader icon={<CloudOutlined />} title="涂鸦智能" subtitle="Tuya 智能家居生态账号授权" />
+        <Hero tone="danger" icon={<CloseCircleFilled />} title="MCP Server 离线" />
+      </div>
+    )
+  }
+
+  const authStatus = tuyaPlatform?.auth_status as Record<string, unknown> | undefined
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="fg-page" style={{ maxWidth: 980, margin: '0 auto' }}>
       {contextHolder}
-      <Space align="center" style={{ marginBottom: 16 }}>
-        <CloudOutlined style={{ fontSize: 24 }} />
-        <Title level={3} style={{ margin: 0 }}>涂鸦平台</Title>
-      </Space>
+      <PageHeader
+        icon={<CloudOutlined />}
+        title="涂鸦智能"
+        subtitle="通过涂鸦 App 扫码完成账号授权，便可控制所有涂鸦生态设备"
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()} loading={loading}>
+            刷新
+          </Button>
+        }
+      />
 
-      {/* Platform Status */}
-      <Card title="平台状态" loading={loading} style={{ marginBottom: 16 }}>
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="平台">涂鸦智能</Descriptions.Item>
-          <Descriptions.Item label="认证状态">
-            {isAuthed
-              ? <Tag color="green">已授权</Tag>
-              : <Tag color="red">未授权</Tag>
-            }
-          </Descriptions.Item>
-          {tuyaPlatform?.auth_status && (
-            <>
-              <Descriptions.Item label="用户 UID">
-                {(tuyaPlatform.auth_status as any).uid || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="区域端点">
-                {(tuyaPlatform.auth_status as any).endpoint || 'apigw.tuyacn.com'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Token 剩余">
-                {(tuyaPlatform.auth_status as any).token_remaining_seconds
-                  ? `${Math.floor(Number((tuyaPlatform.auth_status as any).token_remaining_seconds) / 3600)} 小时`
-                  : '-'
-                }
-              </Descriptions.Item>
-            </>
-          )}
-        </Descriptions>
+      <div style={{ marginBottom: 20 }}>
+        <Hero
+          tone={isAuthed ? 'success' : 'default'}
+          icon={isAuthed ? <CheckCircleFilled /> : <CloudOutlined />}
+          title={isAuthed ? '已连接涂鸦账号' : '未授权涂鸦账号'}
+          description={
+            isAuthed
+              ? `区域端点 ${(authStatus?.endpoint as string) || 'apigw.tuyacn.com'} · ${devices.length} 台设备`
+              : '在涂鸦 App 中获取用户代码，输入后扫码完成授权'
+          }
+          actions={
+            isAuthed ? (
+              <Popconfirm title="确定退出涂鸦平台?" onConfirm={handleLogout}>
+                <Button danger icon={<LogoutOutlined />}>退出授权</Button>
+              </Popconfirm>
+            ) : null
+          }
+        />
+      </div>
 
-        <Space style={{ marginTop: 12 }} wrap>
-          {!isAuthed && (
-            <>
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={12} md={6}>
+          <StatTile icon={<CloudOutlined />} tone="info" label="平台" value="涂鸦智能" trend="Tuya / Smart Life" />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
+            tone={isAuthed ? 'success' : 'default'}
+            label="授权状态"
+            value={isAuthed ? '已授权' : '未授权'}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<GlobalOutlined />}
+            label="区域端点"
+            value={(authStatus?.endpoint as string) || 'apigw.tuyacn.com'}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          <StatTile
+            icon={<ClockCircleOutlined />}
+            label="设备数量"
+            value={devices.length}
+            suffix="台"
+          />
+        </Col>
+      </Row>
+
+      {!isAuthed && (
+        <Card className="fg-card-antd" title="扫码授权" style={{ marginBottom: 20 }}>
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <p style={{ color: 'var(--fg-text-secondary)', marginBottom: 0 }}>
+              1. 打开涂鸦智能 / Smart Life App → 我的 → 设置 → 账号与安全，找到「用户代码」<br />
+              2. 在下方输入用户代码并点击「获取二维码」<br />
+              3. 使用涂鸦智能 App 扫描二维码完成授权
+            </p>
+            <Space wrap>
               <Input
                 prefix={<UserOutlined />}
                 placeholder="涂鸦 App 用户代码"
                 value={userCode}
                 onChange={(e) => setUserCode(e.target.value)}
-                style={{ width: 200 }}
+                style={{ width: 240 }}
                 allowClear
+                size="large"
               />
-              <Button type="primary" icon={<QrcodeOutlined />}
-                onClick={handleGetQr} loading={qrLoading}
-                disabled={!userCode.trim()}>
-                扫码授权
+              <Button
+                type="primary"
+                size="large"
+                icon={<QrcodeOutlined />}
+                onClick={handleGetQr}
+                loading={qrLoading}
+                disabled={!userCode.trim()}
+              >
+                获取二维码
               </Button>
-            </>
-          )}
-          {isAuthed && (
-            <>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()}>
-                刷新状态
-              </Button>
-              <Popconfirm title="确定退出涂鸦平台？" onConfirm={handleLogout}>
-                <Button danger icon={<LogoutOutlined />}>退出授权</Button>
-              </Popconfirm>
-            </>
-          )}
-        </Space>
-      </Card>
+            </Space>
+          </Space>
+        </Card>
+      )}
 
-      {/* QR Code */}
       {qrUrl && (
-        <Card title="扫码授权" style={{ marginBottom: 16, textAlign: 'center' }}>
+        <Card className="fg-card-antd" title="扫码授权" style={{ marginBottom: 20, textAlign: 'center' }}>
           <Space direction="vertical" align="center" size="middle">
             <QRCode value={qrUrl} size={200} />
-            <Text type="secondary">请使用涂鸦智能 App 扫描上方二维码</Text>
+            <div style={{ color: 'var(--fg-text-secondary)' }}>
+              请使用涂鸦智能 App 扫描上方二维码
+            </div>
             {qrPolling && <Spin tip="等待扫码..." />}
           </Space>
         </Card>
       )}
 
-      {/* Authorized: show device list */}
       {isAuthed && (
         <Card
-          title={`涂鸦设备 (${devices.length})`}
+          className="fg-card-antd"
+          title={
+            <Space>
+              <CloudOutlined /> 涂鸦设备
+              <Tag>{devices.length}</Tag>
+            </Space>
+          }
+          bodyStyle={{ padding: 0 }}
           extra={
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={devLoading}>
               刷新设备
@@ -249,32 +296,18 @@ export default function TuyaAuth() {
           }
         >
           {devices.length === 0 && !devLoading ? (
-            <Result status="info" title="暂无设备" subTitle="请先在涂鸦 App 中添加设备" />
+            <Empty description="暂无设备，请先在涂鸦 App 中添加设备" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
             <Table
               dataSource={devices}
               columns={deviceColumns}
               rowKey="id"
               loading={devLoading}
-              size="small"
-              pagination={{ pageSize: 20 }}
+              size="middle"
+              pagination={{ pageSize: 20, showSizeChanger: false }}
             />
           )}
         </Card>
-      )}
-
-      {!isAuthed && !qrUrl && (
-        <Alert
-          type="info"
-          showIcon
-          message="涂鸦平台未授权"
-          description={<>
-            1. 打开涂鸦智能 / Smart Life App → 我的 → 设置 → 账号与安全，找到「用户代码」<br />
-            2. 在上方输入用户代码，点击「扫码授权」获取二维码<br />
-            3. 使用涂鸦智能 App 扫描二维码完成授权
-          </>}
-          style={{ marginTop: 16 }}
-        />
       )}
     </div>
   )
