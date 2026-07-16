@@ -112,10 +112,10 @@ export default function Devices() {
         />
         <div className="fg-empty-state">
           <AppstoreOutlined />
-          <div style={{ fontSize: 15, color: 'var(--fg-text-secondary)' }}>暂无已授权的平台</div>
-          <div style={{ marginBottom: 16 }}>请先完成米家、涂鸦等任一平台的账号授权</div>
+          <div style={{ fontSize: 15, color: 'var(--fg-text-secondary)' }}>暂无已登录的平台</div>
+          <div style={{ marginBottom: 16 }}>请先在米家、涂鸦等任一平台登录账号</div>
           <Button type="primary" onClick={() => navigate('/platform/xiaomi')}>
-            去授权平台
+            去登录平台
           </Button>
         </div>
       </div>

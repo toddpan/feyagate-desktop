@@ -1,11 +1,11 @@
 [
   {
     "type": "feyagate-desktop-mac",
-    "version": "1.2.14",
-    "url": "https://your-ota-server.example.com/ota/feyagate-desktop/FeyaGate-Desktop-v1.2.14-mac-x64.dmg",
-    "md5": "cab1659e854a1a3b8391bebf02472604",
-    "release_notes": "多小智客户端支持(最多3个同时连接)、修复已知问题",
+    "version": "1.2.19",
+    "url": "https://your-ota-server.example.com/ota/feyagate-desktop/FeyaGate-Desktop-v1.2.19-mac-arm64.dmg",
+    "md5": "6098f0d5171a6671ecad944048b771f6",
+    "release_notes": "梳理平台账号登录与设备授权文案：把平台账号相关「授权」统一改为「登录」，避免与设备授权（License）混淆；授权中心、Toast、Modal、引导说明同步更新。",
     "force_update": false,
-    "size": 160353762
+    "size": 129777821
   }
 ]

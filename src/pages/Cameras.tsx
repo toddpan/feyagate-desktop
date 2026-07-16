@@ -75,10 +75,10 @@ export default function Cameras() {
         <PageHeader icon={<CameraOutlined />} title="摄像头" subtitle="实时预览、抓拍、回看" />
         <div className="fg-empty-state">
           <CameraOutlined />
-          <div style={{ fontSize: 15, color: 'var(--fg-text-secondary)' }}>请先完成米家账号授权</div>
+          <div style={{ fontSize: 15, color: 'var(--fg-text-secondary)' }}>请先完成米家账号登录</div>
           <div style={{ marginBottom: 16 }}>摄像头功能依赖米家平台账号</div>
           <Button type="primary" onClick={() => navigate('/platform/xiaomi')}>
-            去授权米家
+            去登录米家
           </Button>
         </div>
       </div>

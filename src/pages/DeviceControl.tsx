@@ -181,7 +181,7 @@ export default function DeviceControl() {
   }, [])
 
   if (!serverOnline) return <Empty description="MCP 服务器未连接" />
-  if (!authorized) return <Empty description="请先完成米家账号授权" />
+  if (!authorized) return <Empty description="请先完成米家账号登录" />
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>

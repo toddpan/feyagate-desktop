@@ -113,7 +113,7 @@ export default function XiaomiAuth() {
       try {
         await authCallback(code, regionRef.current)
         setOauthPending(false)
-        messageApi.success('米家授权成功！')
+        messageApi.success('米家登录成功！')
         fetchPlatforms()
       } catch { /* ignore */ }
     })
@@ -121,7 +121,7 @@ export default function XiaomiAuth() {
       window.feyagate.onAuthSuccess(() => {
         setOauthPending(false)
         fetchPlatforms()
-        messageApi.success('米家授权成功！')
+        messageApi.success('米家登录成功！')
       })
     }
   }, [fetchPlatforms, messageApi])
@@ -151,7 +151,7 @@ export default function XiaomiAuth() {
         setOauthPending(true)
         startBrowserPoll()
       } catch (e) {
-        messageApi.error(`启动授权失败: ${e}`)
+        messageApi.error(`启动登录失败: ${e}`)
       }
     }
   }
@@ -168,7 +168,7 @@ export default function XiaomiAuth() {
           setAuthStatus(status)
           if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
           fetchPlatforms()
-          messageApi.success('米家授权成功！')
+          messageApi.success('米家登录成功！')
         }
       } catch { /* continue */ }
     }, 3000)
@@ -184,10 +184,10 @@ export default function XiaomiAuth() {
       setOauthPending(false)
       setManualUrlInput('')
       if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
-      messageApi.success('授权成功！')
+      messageApi.success('登录成功！')
       fetchPlatforms()
     } catch (e) {
-      messageApi.error(`授权失败: ${e}`)
+      messageApi.error(`登录失败: ${e}`)
     } finally { setSubmittingCode(false) }
   }
 
@@ -204,9 +204,9 @@ export default function XiaomiAuth() {
             setOauthPending(false)
             setManualUrlInput('')
             if (popupRef.current && !popupRef.current.closed) popupRef.current.close()
-            messageApi.success('授权成功！')
+            messageApi.success('登录成功！')
             fetchPlatforms()
-          } catch (e) { messageApi.error(`授权失败: ${e}`) }
+          } catch (e) { messageApi.error(`登录失败: ${e}`) }
           finally { setSubmittingCode(false) }
         }
       }
@@ -255,7 +255,7 @@ export default function XiaomiAuth() {
         <PageHeader
           icon={<CloudOutlined />}
           title="米家"
-          subtitle="小米 / 米家 智能家居生态账号授权"
+          subtitle="小米 / 米家 智能家居生态账号登录"
         />
         <Hero
           tone="danger"
@@ -272,7 +272,7 @@ export default function XiaomiAuth() {
       {contextHolder}
       <PageHeader
         icon={<CloudOutlined />}
-        title="米家授权"
+        title="米家登录"
         subtitle="连接你的小米 / 米家账号，便可控制米家生态中的所有设备"
         extra={
           <Button icon={<ReloadOutlined />} onClick={() => fetchPlatforms()} loading={loading}>
@@ -289,7 +289,7 @@ export default function XiaomiAuth() {
           title={
             isAuthed
               ? '已连接米家账号'
-              : '未授权米家账号'
+              : '未登录米家账号'
           }
           description={
             isAuthed
@@ -301,16 +301,16 @@ export default function XiaomiAuth() {
               <Space>
                 <Button icon={<RedoOutlined />} onClick={() => {
                   Modal.confirm({
-                    title: '重新授权',
+                    title: '重新登录',
                     icon: <ExclamationCircleOutlined />,
-                    content: '将重新打开小米登录页面，使用当前账号重新授权。',
-                    okText: '重新授权', cancelText: '取消',
+                    content: '将重新打开小米登录页面，使用当前账号重新登录。',
+                    okText: '重新登录', cancelText: '取消',
                     onOk: handleStartOAuth,
                   })
                 }}>
-                  重新授权
+                  重新登录
                 </Button>
-                <Popconfirm title="确定切换账号？当前授权将清除" onConfirm={async () => {
+                <Popconfirm title="确定切换账号？当前登录信息将清除" onConfirm={async () => {
                   useAuthStore.setState({ authorized: false, cloudServer: '', remainingSeconds: 0 })
                   await handleStartOAuth()
                 }}>
@@ -337,8 +337,8 @@ export default function XiaomiAuth() {
           <StatTile
             icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
             tone={isAuthed ? 'success' : 'default'}
-            label="授权状态"
-            value={isAuthed ? '已授权' : '未授权'}
+            label="登录状态"
+            value={isAuthed ? '已登录' : '未登录'}
           />
         </Col>
         <Col xs={12} md={6}>
@@ -365,7 +365,7 @@ export default function XiaomiAuth() {
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             <p style={{ color: 'var(--fg-text-secondary)', marginBottom: 0 }}>
               选择云服务器区域后，点击下方按钮在弹窗中登录米家账号。
-              授权完成后，弹窗会自动关闭，本页面会自动更新状态。
+              登录完成后，弹窗会自动关闭，本页面会自动更新状态。
             </p>
             <Space wrap>
               <Select
@@ -389,7 +389,7 @@ export default function XiaomiAuth() {
 
       {/* OAuth pending */}
       {oauthPending && (
-        <Card className="fg-card-antd" title="扫码 / 登录授权" style={{ marginBottom: 20 }}>
+        <Card className="fg-card-antd" title="扫码 / 登录流程" style={{ marginBottom: 20 }}>
           <Space direction="vertical" style={{ width: '100%' }} size="large">
             <Alert
               type="info"
@@ -405,9 +405,9 @@ export default function XiaomiAuth() {
                 {
                   title: '复制错误页面的地址',
                   status: 'process',
-                  description: '授权后弹窗会显示"无法访问此网站"— 请复制地址栏 URL',
+                  description: '登录后弹窗会显示"无法访问此网站"— 请复制地址栏 URL',
                 },
-                { title: '完成授权', status: 'wait' },
+                { title: '完成登录', status: 'wait' },
               ]}
             />
             <Card
@@ -427,7 +427,7 @@ export default function XiaomiAuth() {
                   block
                   style={{ height: 48, fontSize: 16 }}
                 >
-                  一键粘贴地址并授权
+                  一键粘贴地址并完成登录
                 </Button>
                 <Divider plain style={{ margin: '4px 0', fontSize: 12 }}>或手动输入</Divider>
                 <Input.TextArea
@@ -459,7 +459,7 @@ export default function XiaomiAuth() {
             <Alert
               type="success"
               showIcon
-              message="系统也在自动检测授权状态，完成后会自动跳转。"
+              message="系统也在自动检测登录状态，完成后会自动跳转。"
             />
           </Space>
         </Card>
@@ -499,8 +499,8 @@ export default function XiaomiAuth() {
           type="info"
           showIcon
           style={{ marginTop: 16 }}
-          message="米家平台未授权"
-          description={'点击「使用米家账号登录」，在弹出的小米登录页面完成 OAuth 授权。'}
+          message="米家平台未登录"
+          description={'点击「使用米家账号登录」，在弹出的小米登录页面完成 OAuth 登录。'}
         />
       )}
     </div>

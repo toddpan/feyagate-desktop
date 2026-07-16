@@ -95,10 +95,10 @@ export default function Auth() {
       fetchStatus()
       setShowManualAuth(false)
       setOauthPending(false)
-      message.success('授权成功！')
+      message.success('登录成功！')
       window.location.hash = '#/'
     } else if (hash.includes('auth=failed')) {
-      message.error('授权失败，请重试')
+      message.error('登录失败，请重试')
       window.location.hash = '#/'
     }
   }, [fetchStatus])
@@ -108,7 +108,7 @@ export default function Auth() {
       await handleCallback(code)
       setShowManualAuth(false)
       setOauthPending(false)
-      message.success('授权成功！')
+      message.success('登录成功！')
     })
 
     if (window.feyagate?.onAuthSuccess) {
@@ -116,7 +116,7 @@ export default function Auth() {
         setShowManualAuth(false)
         setOauthPending(false)
         fetchStatus()
-        message.success('授权成功！')
+        message.success('登录成功！')
       })
     }
   }, [handleCallback, fetchStatus])
@@ -141,7 +141,7 @@ export default function Auth() {
             popupRef.current.close()
           }
           fetchStatus()
-          message.success('授权成功！')
+          message.success('登录成功！')
         }
       } catch { /* ignore */ }
     }, 3000)
@@ -198,7 +198,7 @@ export default function Auth() {
         }, 1000)
         setTimeout(() => clearInterval(checkClosed), 300000)
       } catch (e) {
-        message.error(`启动授权失败: ${e}`)
+        message.error(`启动登录失败: ${e}`)
       }
     }
   }, [startOAuth, startBrowserPoll])
@@ -218,9 +218,9 @@ export default function Auth() {
       if (popupRef.current && !popupRef.current.closed) {
         popupRef.current.close()
       }
-      message.success('授权成功！')
+      message.success('登录成功！')
     } catch (e) {
-      message.error(`授权失败: ${e}`)
+      message.error(`登录失败: ${e}`)
     } finally {
       setSubmittingCode(false)
     }
@@ -242,9 +242,9 @@ export default function Auth() {
             if (popupRef.current && !popupRef.current.closed) {
               popupRef.current.close()
             }
-            message.success('授权成功！')
+            message.success('登录成功！')
           } catch (e) {
-            message.error(`授权失败: ${e}`)
+            message.error(`登录失败: ${e}`)
           } finally {
             setSubmittingCode(false)
           }
@@ -329,7 +329,7 @@ export default function Auth() {
           title={
             <Space>
               <CloudOutlined />
-              <span>米家账号授权</span>
+              <span>米家账号登录</span>
             </Space>
           }
           extra={
@@ -350,7 +350,7 @@ export default function Auth() {
               <Result
                 status="success"
                 icon={<CheckCircleOutlined />}
-                title="已授权"
+                title="已登录"
                 subTitle="小米账号已成功连接"
               />
               <Descriptions bordered column={1} size="small">
@@ -367,16 +367,16 @@ export default function Auth() {
                   icon={<RedoOutlined />}
                   onClick={() => {
                     Modal.confirm({
-                      title: '重新授权',
+                      title: '重新登录',
                       icon: <ExclamationCircleOutlined />,
-                      content: '将重新打开小米登录页面，使用当前账号重新授权。适用于 Token 过期或需要刷新权限的情况。',
-                      okText: '重新授权',
+                      content: '将重新打开小米登录页面，使用当前账号重新登录。适用于 Token 过期或需要刷新权限的情况。',
+                      okText: '重新登录',
                       cancelText: '取消',
                       onOk: handleStartOAuth,
                     })
                   }}
                 >
-                  重新授权
+                  重新登录
                 </Button>
                 <Button
                   icon={<SwapOutlined />}
@@ -385,7 +385,7 @@ export default function Auth() {
                     Modal.confirm({
                       title: '切换账号',
                       icon: <ExclamationCircleOutlined />,
-                      content: '将清除当前授权信息并打开小米登录页面。您可以使用另一个小米账号登录。切换后当前设备列表将被刷新。',
+                      content: '将清除当前登录信息并打开小米登录页面。您可以使用另一个小米账号登录。切换后当前设备列表将被刷新。',
                       okText: '确认切换',
                       okButtonProps: { danger: true },
                       cancelText: '取消',
@@ -465,7 +465,7 @@ function ManualAuthSection({
       <Alert
         type="info"
         showIcon
-        message="浏览器模式授权"
+        message="浏览器模式登录"
         description="小米登录页面已在弹窗中打开。如果弹窗被浏览器拦截，请允许弹窗后重试。"
       />
 
@@ -476,14 +476,14 @@ function ManualAuthSection({
         items={[
           {
             title: '在弹窗中登录小米账号',
-            description: '点击"确认授权"完成小米账号登录',
+            description: '点击"确认登录"完成小米账号登录',
             status: 'finish',
           },
           {
             title: '复制错误页面的地址',
             description: (
               <Space direction="vertical" size={4}>
-                <Text>授权后弹窗会显示 <Text strong>"无法访问此网站"</Text> — 这是正常的！</Text>
+                <Text>登录后弹窗会显示 <Text strong>"无法访问此网站"</Text> — 这是正常的！</Text>
                 <Text type="danger" strong>请复制弹窗地址栏中的完整 URL，然后点击下方按钮粘贴</Text>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   地址类似: <Text code>https://127.0.0.1/?code=xxxxxxxx</Text>
@@ -493,7 +493,7 @@ function ManualAuthSection({
             status: 'process',
           },
           {
-            title: '完成授权',
+            title: '完成登录',
             description: '系统自动提取授权码并完成登录',
             status: 'wait',
           },
@@ -517,7 +517,7 @@ function ManualAuthSection({
             block
             style={{ height: 48, fontSize: 16 }}
           >
-            一键粘贴地址并授权
+            一键粘贴地址并登录
           </Button>
 
           <Divider plain style={{ margin: '4px 0', fontSize: 12 }}>或手动输入</Divider>
@@ -547,7 +547,7 @@ function ManualAuthSection({
       <Alert
         type="success"
         showIcon
-        message="系统也在自动检测授权状态，如果授权已完成会自动跳转。"
+        message="系统也在自动检测登录状态，如果登录已完成会自动跳转。"
       />
     </Space>
   )

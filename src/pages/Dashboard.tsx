@@ -163,7 +163,7 @@ export default function Dashboard() {
           }
           description={
             isLicensed
-              ? `${authedPlatforms}/${totalPlatforms} 个平台已授权 · 今日 ${today?.ai_calls ?? 0} 次 AI 调用`
+              ? `${authedPlatforms}/${totalPlatforms} 个平台已登录 · 今日 ${today?.ai_calls ?? 0} 次 AI 调用`
               : '升级授权版可解锁涂鸦 / 美的 / 易微联 等更多平台'
           }
           actions={
@@ -223,7 +223,7 @@ export default function Dashboard() {
 
           {/* Platforms grid */}
           <div style={{ marginBottom: 20 }}>
-            <div className="fg-card-section-title">平台授权状态</div>
+            <div className="fg-card-section-title">平台授权与登录状态</div>
             <Row gutter={[16, 16]}>
               {(['xiaomi', 'tuya', 'midea', 'ewelink'] as const).map((id) => {
                 const plat = authPlatforms.find((p) => p.platform_id === id)
@@ -255,7 +255,7 @@ export default function Dashboard() {
                       </div>
                       <div className="tags">
                         <SoftTag tone={isLoggedIn ? 'success' : 'default'} dot>
-                          {isLoggedIn ? '账号已授权' : '账号未授权'}
+                          {isLoggedIn ? '账号已登录' : '账号未登录'}
                         </SoftTag>
                         <SoftTag
                           tone={
@@ -275,7 +275,7 @@ export default function Dashboard() {
                         <div className="hint">{cap.message}</div>
                       ) : null}
                       <div className="cta">
-                        <span>{isLoggedIn ? '管理' : '去授权'}</span>
+                        <span>{isLoggedIn ? '管理' : '去登录'}</span>
                         <ArrowRightOutlined />
                       </div>
                     </div>

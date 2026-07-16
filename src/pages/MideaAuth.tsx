@@ -116,7 +116,7 @@ export default function MideaAuth() {
   if (!serverOnline) {
     return (
       <div className="fg-page">
-        <PageHeader icon={<HomeOutlined />} title="美的美居" subtitle="美的智能家居生态账号授权" />
+        <PageHeader icon={<HomeOutlined />} title="美的美居" subtitle="美的智能家居生态账号登录" />
         <Hero tone="danger" icon={<CloseCircleFilled />} title="MCP Server 离线" />
       </div>
     )
@@ -142,7 +142,7 @@ export default function MideaAuth() {
         <Hero
           tone={isAuthed ? 'success' : 'default'}
           icon={isAuthed ? <CheckCircleFilled /> : <HomeOutlined />}
-          title={isAuthed ? '已连接美的账号' : '未授权美的账号'}
+          title={isAuthed ? '已连接美的账号' : '未登录美的账号'}
           description={
             isAuthed
               ? `账号 ${(authStatus?.account_masked as string) || '-'} · ${devices.length} 台设备`
@@ -151,7 +151,7 @@ export default function MideaAuth() {
           actions={
             isAuthed ? (
               <Popconfirm title="确定退出美的平台?" onConfirm={handleLogout}>
-                <Button danger icon={<LogoutOutlined />}>退出授权</Button>
+                <Button danger icon={<LogoutOutlined />}>退出登录</Button>
               </Popconfirm>
             ) : null
           }
@@ -166,8 +166,8 @@ export default function MideaAuth() {
           <StatTile
             icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
             tone={isAuthed ? 'success' : 'default'}
-            label="授权状态"
-            value={isAuthed ? '已授权' : '未授权'}
+            label="登录状态"
+            value={isAuthed ? '已登录' : '未登录'}
           />
         </Col>
         <Col xs={12} md={6}>

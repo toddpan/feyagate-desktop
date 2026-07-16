@@ -150,7 +150,7 @@ export default function EwelinkAuth() {
   if (!serverOnline) {
     return (
       <div className="fg-page">
-        <PageHeader icon={<NodeIndexOutlined />} title="易微联" subtitle="eWeLink 智能家居生态账号授权" />
+        <PageHeader icon={<NodeIndexOutlined />} title="易微联" subtitle="eWeLink 智能家居生态账号登录" />
         <Hero tone="danger" icon={<CloseCircleFilled />} title="MCP Server 离线" />
       </div>
     )
@@ -177,7 +177,7 @@ export default function EwelinkAuth() {
         <Hero
           tone={isAuthed ? 'success' : 'default'}
           icon={isAuthed ? <CheckCircleFilled /> : <NodeIndexOutlined />}
-          title={isAuthed ? '已连接易微联账号' : '未授权易微联账号'}
+          title={isAuthed ? '已连接易微联账号' : '未登录易微联账号'}
           description={
             isAuthed
               ? `区域 ${region.toUpperCase()} · ${devices.length} 台设备`
@@ -186,7 +186,7 @@ export default function EwelinkAuth() {
           actions={
             isAuthed ? (
               <Popconfirm title="确定退出易微联平台?" onConfirm={handleLogout}>
-                <Button danger icon={<LogoutOutlined />}>退出授权</Button>
+                <Button danger icon={<LogoutOutlined />}>退出登录</Button>
               </Popconfirm>
             ) : null
           }
@@ -201,8 +201,8 @@ export default function EwelinkAuth() {
           <StatTile
             icon={isAuthed ? <CheckCircleFilled /> : <CloseCircleFilled />}
             tone={isAuthed ? 'success' : 'default'}
-            label="授权状态"
-            value={isAuthed ? '已授权' : '未授权'}
+            label="登录状态"
+            value={isAuthed ? '已登录' : '未登录'}
           />
         </Col>
         <Col xs={12} md={6}>

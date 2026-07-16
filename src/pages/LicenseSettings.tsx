@@ -138,7 +138,7 @@ export default function LicenseSettings() {
       ? '已激活'
       : status === 'pending'
         ? '待激活'
-        : '未授权'
+        : '未激活授权'
 
   const statusTone: 'success' | 'warning' | 'default' =
     status === 'activated' ? 'success' : status === 'pending' ? 'warning' : 'default'
@@ -310,7 +310,7 @@ export default function LicenseSettings() {
               <span className="name">{PLATFORM_LABELS[p]}</span>
               <Space wrap size={6} className="tags">
                 <SoftTag tone={loggedIn ? 'success' : 'default'} dot>
-                  {loggedIn ? '账号已授权' : '账号未授权'}
+                  {loggedIn ? '账号已登录' : '账号未登录'}
                 </SoftTag>
                 <SoftTag
                   tone={
@@ -331,7 +331,7 @@ export default function LicenseSettings() {
                 size="small"
                 onClick={() => navigate(PLATFORM_ROUTE[p])}
               >
-                {loggedIn ? '查看 / 退出 →' : '去授权 →'}
+                {loggedIn ? '查看 / 退出 →' : '去登录 →'}
               </Button>
             </div>
           )

@@ -153,8 +153,8 @@ function PlatformBadgeStrip() {
         const tip = capBlocked
           ? `${p.label} · 授权版不可用`
           : loggedIn
-            ? `${p.label} · 账号已授权`
-            : `${p.label} · 账号未授权`
+            ? `${p.label} · 账号已登录`
+            : `${p.label} · 账号未登录`
         const dotColor = capBlocked
           ? 'var(--fg-danger)'
           : loggedIn
