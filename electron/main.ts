@@ -366,11 +366,20 @@ function stopServer(): Promise<void> {
   })
 }
 
-function getTrayIconPath(): string {
+function getIconDir(): string {
   const isDev = !!VITE_DEV_SERVER_URL
-  const iconDir = isDev
-    ? path.resolve(__dirname, '../resources/icons')
-    : path.join(process.resourcesPath!, 'icons')
+
+  if (isDev) {
+    // In dev mode, __dirname is dist-electron/, go up to project root then into resources/icons
+    const projectRoot = path.resolve(__dirname, '../..')
+    return path.join(projectRoot, 'resources', 'icons')
+  }
+
+  return path.join(process.resourcesPath!, 'icons')
+}
+
+function getTrayIconPath(): string {
+  const iconDir = getIconDir()
 
   if (process.platform === 'darwin') {
     return path.join(iconDir, 'trayTemplate.png')
@@ -394,9 +403,43 @@ function createTray() {
   if (tray) return
 
   const iconPath = getTrayIconPath()
-  const icon = nativeImage.createFromPath(iconPath)
+  console.log('[Tray] Icon path:', iconPath)
 
-  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
+  let icon = nativeImage.createFromPath(iconPath)
+
+  if (icon.isEmpty()) {
+    console.warn('[Tray] Icon is empty, trying fallback icons')
+    const iconDir = getIconDir()
+
+    const fallbacks = process.platform === 'darwin'
+      ? ['trayTemplate@2x.png', 'tray-32.png', 'tray-32-256.png']
+      : ['tray-32.png', 'tray-32-256.png', 'tray-16.png']
+
+    for (const fallbackName of fallbacks) {
+      const fallbackPath = path.join(iconDir, fallbackName)
+      console.log('[Tray] Trying fallback:', fallbackPath)
+      icon = nativeImage.createFromPath(fallbackPath)
+      if (!icon.isEmpty()) {
+        console.log('[Tray] Using fallback icon:', fallbackName)
+        break
+      }
+    }
+  }
+
+  if (icon.isEmpty()) {
+    console.error('[Tray] All icons failed to load, creating 16x16 placeholder')
+    icon = nativeImage.createFromBuffer(Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0xf3, 0xff, 0x61, 0x00, 0x00, 0x00,
+      0x1a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x62, 0x60, 0x40, 0x05, 0x23,
+      0x23, 0x23, 0xff, 0xff, 0xff, 0x00, 0x06, 0x10, 0x00, 0x01, 0x5d, 0x50,
+      0x01, 0x7b, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42,
+      0x60, 0x82
+    ]))
+  }
+
+  tray = new Tray(icon)
   tray.setToolTip('FeyaGate Desktop')
 
   const contextMenu = Menu.buildFromTemplate([
