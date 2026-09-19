@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { checkForUpdate, type UpdateInfo } from '../services/updater'
+import { checkForUpdate, getCurrentVersion, type UpdateInfo } from '../services/updater'
 
 interface UpdateState {
   hasUpdate: boolean
@@ -16,7 +16,7 @@ interface UpdateState {
 export const useUpdateStore = create<UpdateState>((set) => ({
   hasUpdate: false,
   updateInfo: null,
-  currentVersion: '1.2.21',
+  currentVersion: getCurrentVersion(),
   checking: false,
   error: null,
   dismissed: false,
