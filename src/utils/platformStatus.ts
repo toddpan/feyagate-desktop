@@ -14,7 +14,53 @@ export const PLATFORM_LABELS: Record<string, string> = {
   tuya: '涂鸦',
   midea: '美的',
   ewelink: '易微联',
+  huawei: '华为',
   ha: 'HomeAssistant',
+}
+
+/**
+ * 平台显示名（纯展示映射，不是收费规则）。
+ * 云端新下发的平台若不在映射表中，直接回落到平台 id。
+ */
+export function platformLabel(platform: string): string {
+  return PLATFORM_LABELS[platform] ?? platform
+}
+
+/** 平台名列表 → 「米家 / 涂鸦」 */
+export function joinPlatformLabels(platforms: string[]): string {
+  return platforms.map(platformLabel).join(' / ')
+}
+
+/** 平台策略中与「免费 / 需授权」判定相关的最小字段（服务端下发） */
+export interface PlatformPolicyLike {
+  enabled: boolean
+  trialHours: number
+}
+
+export interface PlatformGroups {
+  /** 服务端下发过的全部平台 */
+  all: string[]
+  /** 免费：enabled && trial_hours === 0 */
+  free: string[]
+  /** 需授权 / 试用：trial_hours > 0 */
+  chargeable: string[]
+}
+
+/**
+ * 按服务端下发的策略分组（不臆造规则）：
+ *   - 免费  = enabled && trial_hours === 0
+ *   - 需授权/试用 = trial_hours > 0
+ * 未同步（platformDetails 为空）时三组均为空，调用方应显示「未同步」中性态。
+ */
+export function groupPlatformsByPolicy(
+  details: Record<string, PlatformPolicyLike>,
+): PlatformGroups {
+  const all = Object.keys(details)
+  return {
+    all,
+    free: all.filter((p) => details[p].enabled && (details[p].trialHours ?? 0) === 0),
+    chargeable: all.filter((p) => (details[p].trialHours ?? 0) > 0),
+  }
 }
 
 export type PlatformStatusKind =

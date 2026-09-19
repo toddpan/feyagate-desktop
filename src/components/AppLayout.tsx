@@ -40,6 +40,7 @@ const platformKeyMap: Record<string, string> = {
   '/platform/tuya': 'tuya',
   '/platform/midea': 'midea',
   '/platform/ewelink': 'ewelink',
+  '/platform/huawei': 'huawei',
   '/platform/xiaomi': 'xiaomi',
 }
 
@@ -54,6 +55,7 @@ function buildGroups(isPlatformEnabled: (p: string) => boolean): NavGroup[] {
     { key: '/platform/tuya', icon: <CloudOutlined />, label: '涂鸦智能' },
     { key: '/platform/midea', icon: <HomeOutlined />, label: '美的美居' },
     { key: '/platform/ewelink', icon: <NodeIndexOutlined />, label: '易微联' },
+    { key: '/platform/huawei', icon: <CloudOutlined />, label: '华为智慧生活' },
     { key: '/xiaozhi', icon: <ThunderboltOutlined />, label: '小智平台' },
   ].map((item) => {
     const platform = platformKeyMap[item.key]
@@ -134,6 +136,7 @@ const HEADER_PLATFORMS = [
   { id: 'tuya', label: '涂鸦', route: '/platform/tuya' },
   { id: 'midea', label: '美的', route: '/platform/midea' },
   { id: 'ewelink', label: '易微联', route: '/platform/ewelink' },
+  { id: 'huawei', label: '华为', route: '/platform/huawei' },
   { id: 'ha', label: 'HA', route: '/platform/ha' },
 ] as const
 
@@ -150,8 +153,9 @@ function PlatformBadgeStrip() {
         const capBlocked = cap?.enabled === false
         const preset = PLATFORM_PRESET[p.id]
         const color = preset?.color ?? 'var(--fg-text-tertiary)'
+        // 仅当服务端明确下发 enabled=false 时提示不可用（文案不假定具体收费规则）
         const tip = capBlocked
-          ? `${p.label} · 授权版不可用`
+          ? `${p.label} · 当前不可用，请查看设备授权`
           : loggedIn
             ? `${p.label} · 账号已登录`
             : `${p.label} · 账号未登录`
@@ -356,6 +360,7 @@ function menuLabelOf(key: string): string {
     '/platform/tuya': '平台集成 / 涂鸦',
     '/platform/midea': '平台集成 / 美的',
     '/platform/ewelink': '平台集成 / 易微联',
+    '/platform/huawei': '平台集成 / 华为',
     '/xiaozhi': '平台集成 / 小智',
     '/memory': 'AI 与自动化 / 记忆',
     '/skills': 'AI 与自动化 / 技能',

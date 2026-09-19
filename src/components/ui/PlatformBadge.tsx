@@ -10,6 +10,7 @@ export const PLATFORM_PRESET: Record<string, { label: string; color: string }> =
   tuya: { label: '涂鸦', color: 'var(--fg-p-tuya)' },
   midea: { label: '美的', color: 'var(--fg-p-midea)' },
   ewelink: { label: '易微联', color: 'var(--fg-p-ewelink)' },
+  huawei: { label: '华为', color: 'var(--fg-p-huawei)' },
   ha: { label: 'HA', color: 'var(--fg-p-ha)' },
 }
 

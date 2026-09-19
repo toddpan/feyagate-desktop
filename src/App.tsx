@@ -19,6 +19,7 @@ import TriggerStats from './pages/TriggerStats'
 import TuyaAuth from './pages/TuyaAuth'
 import MideaAuth from './pages/MideaAuth'
 import EwelinkAuth from './pages/EwelinkAuth'
+import HuaweiAuth from './pages/HuaweiAuth'
 import Schedules from './pages/Schedules'
 import Memory from './pages/Memory'
 import Skills from './pages/Skills'
@@ -48,7 +49,9 @@ export default function App() {
         <Route path="/platform/tuya" element={<PlatformGate platform="tuya"><TuyaAuth /></PlatformGate>} />
         <Route path="/platform/midea" element={<PlatformGate platform="midea"><MideaAuth /></PlatformGate>} />
         <Route path="/platform/ewelink" element={<PlatformGate platform="ewelink"><EwelinkAuth /></PlatformGate>} />
+        <Route path="/platform/huawei" element={<PlatformGate platform="huawei"><HuaweiAuth /></PlatformGate>} />
         <Route path="/tuya" element={<Navigate to="/platform/tuya" replace />} />
+        <Route path="/huawei" element={<Navigate to="/platform/huawei" replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/docs" element={<McpDocs />} />
         <Route path="*" element={<Navigate to="/" replace />} />

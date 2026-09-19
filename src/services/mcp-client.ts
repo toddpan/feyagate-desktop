@@ -445,6 +445,8 @@ export interface Capabilities {
   platforms: Record<string, PlatformPolicy>
   features: Record<string, boolean>
   message: string
+  /** 是否已从云端拉到能力（false/缺省 = 未同步，UI 不得断言平台可用性） */
+  loaded?: boolean
   /** 订阅是否有效（含宽限期） */
   is_subscription_active?: boolean
   /** 宽限期剩余天数，0=不在宽限期 */
@@ -467,8 +469,13 @@ export interface LicenseInfo {
   guidance?: {
     message: string
     how_to_authorize: string
-    free_features: string
-    licensed_features: string
+    /** 新版：云端下发的能力说明（平台 / 功能清单） */
+    platforms?: string
+    features?: string
+    /** 旧服务端遗留字段（仅兼容，不再使用） */
+    free_features?: string
+    licensed_features?: string
+    trial_platforms?: string
   }
   activated?: boolean
   message?: string
@@ -1002,6 +1009,76 @@ export async function getEwelinkDeviceSpecs(deviceId: string): Promise<Record<st
 
 export async function ewelinkControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
   return callTool('set_ewelink_device_property', { deviceId, property, value })
+}
+
+// ─── Huawei (华为智慧生活) APIs ───────────────────────────────────────
+
+export interface HuaweiDevice {
+  id: string
+  name: string
+  type: string
+  online: boolean
+  room_name?: string
+  model?: string
+  prod_id?: string
+  services?: string[]
+}
+
+export async function huaweiLogin(
+  account: string,
+  password: string,
+  code?: string
+): Promise<{
+  success: boolean
+  message?: string
+  device_count?: number
+  auth_status?: Record<string, unknown>
+}> {
+  const args: Record<string, unknown> = { account, password }
+  if (code) args.code = code
+  return callTool('auth/huawei_login', args)
+}
+
+export async function huaweiChallenge(
+  code: string
+): Promise<{
+  success: boolean
+  error?: string
+  message?: string
+  session?: Record<string, unknown>
+}> {
+  return callTool('auth/huawei_challenge', { code })
+}
+
+export async function huaweiLogout(): Promise<{ success: boolean; message: string }> {
+  return callTool('auth/huawei_logout')
+}
+
+export async function getHuaweiDevices(): Promise<{ total: number; devices: HuaweiDevice[] }> {
+  return callTool('device/list', { platform: 'huawei' })
+}
+
+export async function refreshHuaweiDevices(): Promise<{ success: boolean; device_count: number }> {
+  return callTool('huawei/refresh')
+}
+
+export async function getHuaweiDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
+  return callTool('get_huawei_device_properties', { deviceId })
+}
+
+export async function getHuaweiDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
+  return callTool('device/specs', { device_id: deviceId })
+}
+
+export async function huaweiControl(
+  deviceId: string,
+  property: string,
+  value: unknown,
+  serviceId?: string
+): Promise<{ success: boolean; message: string }> {
+  const args: Record<string, unknown> = { deviceId, property, value }
+  if (serviceId) args.serviceId = serviceId
+  return callTool('set_huawei_device_property', args)
 }
 
 // ─── Schedule (定时任务) APIs ─────────────────────────────────────────

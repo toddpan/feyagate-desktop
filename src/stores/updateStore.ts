@@ -16,7 +16,7 @@ interface UpdateState {
 export const useUpdateStore = create<UpdateState>((set) => ({
   hasUpdate: false,
   updateInfo: null,
-  currentVersion: '1.2.16',
+  currentVersion: '1.2.21',
   checking: false,
   error: null,
   dismissed: false,

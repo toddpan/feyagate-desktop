@@ -14,7 +14,7 @@ import {
 import { useLicenseStore } from '../stores/licenseStore'
 import { useCapabilityStore } from '../stores/capabilityStore'
 import { usePlatformAuthStore } from '../stores/platformAuthStore'
-import { platformStatusInfo, PLATFORM_LABELS } from '../utils/platformStatus'
+import { platformStatusInfo, platformLabel, joinPlatformLabels, groupPlatformsByPolicy } from '../utils/platformStatus'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentVersion } from '../services/updater'
 import { Hero, PageHeader, SoftTag, StatTile } from '../components/ui'
@@ -34,6 +34,7 @@ const PLATFORM_ROUTE: Record<string, string> = {
   tuya: '/platform/tuya',
   midea: '/platform/midea',
   ewelink: '/platform/ewelink',
+  huawei: '/platform/huawei',
 }
 
 function maskKey(key: string) {
@@ -50,6 +51,8 @@ export default function LicenseSettings() {
   } = useLicenseStore()
 
   const platformDetails = useCapabilityStore((s) => s.platformDetails)
+  const capLoaded = useCapabilityStore((s) => s.loaded)
+  const capMessage = useCapabilityStore((s) => s.message)
   const fetchCapabilities = useCapabilityStore((s) => s.fetchCapabilities)
   const capGrace = useCapabilityStore((s) => s.gracePeriodRemaining)
   const capExpiresAt = useCapabilityStore((s) => s.subscriptionExpiresAt)
@@ -106,7 +109,7 @@ export default function LicenseSettings() {
     Modal.confirm({
       title: '确认清除授权',
       icon: <ExclamationCircleOutlined />,
-      content: '清除授权后将恢复为免费版，仅支持米家平台。确定要继续吗？',
+      content: '清除授权后将恢复为免费版，可用平台以服务器下发的授权规则为准。确定要继续吗？',
       okText: '确认清除',
       okType: 'danger',
       cancelText: '取消',
@@ -118,6 +121,17 @@ export default function LicenseSettings() {
   }
 
   const isLicensed = edition === 'licensed'
+  // 平台清单与「免费 / 需授权」分组全部来自服务端下发的 capabilities，端侧不写死
+  const capGroups = groupPlatformsByPolicy(platformDetails)
+  const freeNames = joinPlatformLabels(capGroups.free)
+  const chargeableNames = joinPlatformLabels(capGroups.chargeable)
+  // 免费版说明文案：优先用云端顶层 message；未同步时只显示中性等待文案，不断言平台可用性
+  const freeDescription = !capLoaded
+    ? '正在从服务器同步授权规则…'
+    : capMessage
+      || `${freeNames ? `当前可用平台：${freeNames}。` : '可用平台以服务器下发的授权规则为准。'}${
+        chargeableNames ? ` ${chargeableNames} 需授权或试用中。` : ''
+      }如需使用更多平台，请输入授权码或前往飞书文档购买。`
   const effectiveGrace = Math.max(gracePeriodRemaining, capGrace)
   const effectiveExpiresAt =
     subscriptionExpiresAt > capExpiresAt ? subscriptionExpiresAt : capExpiresAt
@@ -196,7 +210,7 @@ export default function LicenseSettings() {
                 }
                 description={
                   isInGrace
-                    ? '到期后 7 天内设备功能仍可用，过期后将恢复为免费版（仅米家）。请尽快续订。'
+                    ? '到期后 7 天内设备功能仍可用，过期后将恢复为免费版，可用平台以服务器下发的授权规则为准。请尽快续订。'
                     : `状态：${statusText}${expiresAtText ? ` · 到期 ${expiresAtText}` : ''}`
                 }
                 actions={
@@ -225,7 +239,7 @@ export default function LicenseSettings() {
                 tone="warning"
                 icon={<FireOutlined />}
                 title="当前为免费版"
-                description="仅支持米家平台。如需使用涂鸦 / 美的 / 易微联等更多平台，请输入授权码或前往飞书文档购买。"
+                description={freeDescription}
                 actions={
                   <Space>
                     <Button
@@ -290,52 +304,62 @@ export default function LicenseSettings() {
         </>
       )}
 
-      {/* Per-platform authorization status */}
+      {/* Per-platform authorization status（平台清单来自服务端下发的 capabilities） */}
       <Card
         className="fg-card-antd"
         title="各平台授权状态"
         style={{ marginBottom: 20 }}
       >
-        {(['xiaomi', 'tuya', 'midea', 'ewelink'] as const).map((p) => {
-          const d = platformDetails[p]
-          const info = platformStatusInfo(
-            d?.status,
-            d?.trialRemainingDays ?? 0,
-            d?.enabled ?? true,
-          )
-          const plat = authPlatforms.find((ap) => ap.platform_id === p)
-          const loggedIn = plat?.authenticated ?? false
-          return (
-            <div className="fg-platform-row" key={p}>
-              <span className="name">{PLATFORM_LABELS[p]}</span>
-              <Space wrap size={6} className="tags">
-                <SoftTag tone={loggedIn ? 'success' : 'default'} dot>
-                  {loggedIn ? '账号已登录' : '账号未登录'}
-                </SoftTag>
-                <SoftTag
-                  tone={
-                    info.color === 'red' || info.color === 'volcano'
-                      ? 'danger'
-                      : info.color === 'gold' || info.color === 'blue'
-                        ? info.color === 'gold' ? 'warning' : 'info'
-                        : 'default'
-                  }
-                >
-                  {info.text}
-                </SoftTag>
-                {info.hint ? <span className="hint">{info.hint}</span> : null}
-                {d?.message ? <span className="hint">{d.message}</span> : null}
-              </Space>
-              <Button
-                type="link"
-                size="small"
-                onClick={() => navigate(PLATFORM_ROUTE[p])}
-              >
-                {loggedIn ? '查看 / 退出 →' : '去登录 →'}
-              </Button>
-            </div>
-          )
-        })}
+        {capGroups.all.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={capLoaded ? '服务端未下发平台授权数据' : '正在从服务器同步授权规则…'}
+          />
+        ) : (
+          capGroups.all.map((p) => {
+            const d = platformDetails[p]
+            const info = platformStatusInfo(
+              d?.status,
+              d?.trialRemainingDays ?? 0,
+              d?.enabled ?? true,
+            )
+            const plat = authPlatforms.find((ap) => ap.platform_id === p)
+            const loggedIn = plat?.authenticated ?? false
+            const route = PLATFORM_ROUTE[p]
+            return (
+              <div className="fg-platform-row" key={p}>
+                <span className="name">{platformLabel(p)}</span>
+                <Space wrap size={6} className="tags">
+                  <SoftTag tone={loggedIn ? 'success' : 'default'} dot>
+                    {loggedIn ? '账号已登录' : '账号未登录'}
+                  </SoftTag>
+                  <SoftTag
+                    tone={
+                      info.color === 'red' || info.color === 'volcano'
+                        ? 'danger'
+                        : info.color === 'gold' || info.color === 'blue'
+                          ? info.color === 'gold' ? 'warning' : 'info'
+                          : 'default'
+                    }
+                  >
+                    {info.text}
+                  </SoftTag>
+                  {info.hint ? <span className="hint">{info.hint}</span> : null}
+                  {d?.message ? <span className="hint">{d.message}</span> : null}
+                </Space>
+                {route ? (
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => navigate(route)}
+                  >
+                    {loggedIn ? '查看 / 退出 →' : '去登录 →'}
+                  </Button>
+                ) : null}
+              </div>
+            )
+          })
+        )}
       </Card>
 
       {/* Input License Key */}
@@ -450,11 +474,15 @@ export default function LicenseSettings() {
             <div style={{ fontSize: 13, color: 'var(--fg-text-secondary)' }}>
               <div style={{ marginBottom: 6 }}>
                 <GiftOutlined style={{ marginRight: 6, color: 'var(--fg-success)' }} />
-                免费版功能：米家、设备控制、摄像头、小爱音箱、MCP 代理、小智 AI
+                {!capLoaded
+                  ? '免费版平台范围：正在从服务器同步授权规则…'
+                  : `免费版平台：${freeNames || '以服务器下发的授权规则为准'}`}
               </div>
               <div>
                 <CrownOutlined style={{ marginRight: 6, color: 'var(--fg-warning)' }} />
-                授权版额外功能：涂鸦平台、美的平台、易微联平台
+                {!capLoaded
+                  ? '需授权 / 试用平台：正在从服务器同步授权规则…'
+                  : `需授权 / 试用平台：${chargeableNames || '以服务器下发的授权规则为准'}`}
               </div>
             </div>
           </Card>

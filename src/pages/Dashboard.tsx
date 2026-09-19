@@ -29,7 +29,9 @@ import { useAuthStore } from '../stores/authStore'
 import { usePlatformAuthStore } from '../stores/platformAuthStore'
 import { useCapabilityStore } from '../stores/capabilityStore'
 import { useLicenseStore } from '../stores/licenseStore'
-import { platformStatusInfo, PLATFORM_LABELS } from '../utils/platformStatus'
+import {
+  platformStatusInfo, platformLabel, joinPlatformLabels, groupPlatformsByPolicy,
+} from '../utils/platformStatus'
 import { useNavigate } from 'react-router-dom'
 import {
   Hero, PageHeader, SoftTag, StatTile, PlatformDot,
@@ -40,6 +42,7 @@ const PLATFORM_ROUTE: Record<string, string> = {
   tuya: '/platform/tuya',
   midea: '/platform/midea',
   ewelink: '/platform/ewelink',
+  huawei: '/platform/huawei',
 }
 
 const PLATFORM_COLOR: Record<string, string> = {
@@ -47,6 +50,7 @@ const PLATFORM_COLOR: Record<string, string> = {
   tuya: '#1890ff',
   midea: '#52c41a',
   ewelink: '#722ed1',
+  huawei: '#e60012',
 }
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
@@ -54,6 +58,7 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   tuya: <CloudOutlined />,
   midea: <HomeOutlined />,
   ewelink: <NodeIndexOutlined />,
+  huawei: <CloudOutlined />,
 }
 
 export default function Dashboard() {
@@ -62,6 +67,8 @@ export default function Dashboard() {
   const authPlatforms = usePlatformAuthStore((s) => s.platforms)
   const fetchAuthPlatforms = usePlatformAuthStore((s) => s.fetchPlatforms)
   const capDetails = useCapabilityStore((s) => s.platformDetails)
+  const capLoaded = useCapabilityStore((s) => s.loaded)
+  const capMessage = useCapabilityStore((s) => s.message)
   const fetchCapabilities = useCapabilityStore((s) => s.fetchCapabilities)
   const licenseEdition = useLicenseStore((s) => s.edition)
 
@@ -130,9 +137,31 @@ export default function Dashboard() {
     : 0
 
   const authedPlatforms = authPlatforms.filter((p) => p.authenticated).length
-  const totalPlatforms = 4 // xiaomi, tuya, midea, ewelink
+  // 平台清单与免费/需授权分组均来自服务端下发的 capabilities，端侧不写死
+  const capGroups = groupPlatformsByPolicy(capDetails)
+  const platformIds = capGroups.all
+  const totalPlatforms = platformIds.length > 0 ? platformIds.length : authedPlatforms
+  const freeNames = joinPlatformLabels(capGroups.free)
+  const chargeableNames = joinPlatformLabels(capGroups.chargeable)
 
   const isLicensed = licenseEdition === 'licensed'
+
+  // 未同步时不得断言平台可用性，只显示中性等待文案
+  const freeTitle = isLicensed
+    ? '授权版 · 全部功能可用'
+    : !capLoaded
+      ? '授权规则同步中…'
+      : freeNames
+        ? `免费版 · ${freeNames} 可用`
+        : '免费版'
+  const freeDescription = isLicensed
+    ? `${authedPlatforms}/${totalPlatforms} 个平台已登录 · 今日 ${today?.ai_calls ?? 0} 次 AI 调用`
+    : capMessage
+      || (!capLoaded
+        ? '正在从服务器同步授权规则…'
+        : freeNames
+          ? `当前可用平台：${freeNames}${chargeableNames ? `；${chargeableNames} 需授权或试用中` : ''}`
+          : '可用平台以服务器下发的授权规则为准')
 
   return (
     <div className="fg-page">
@@ -156,16 +185,8 @@ export default function Dashboard() {
         <Hero
           tone={isLicensed ? 'default' : 'warning'}
           icon={isLicensed ? <CheckCircleFilled /> : <FireOutlined />}
-          title={
-            isLicensed
-              ? '授权版 · 全部功能可用'
-              : '免费版 · 仅米家可用'
-          }
-          description={
-            isLicensed
-              ? `${authedPlatforms}/${totalPlatforms} 个平台已登录 · 今日 ${today?.ai_calls ?? 0} 次 AI 调用`
-              : '升级授权版可解锁涂鸦 / 美的 / 易微联 等更多平台'
-          }
+          title={freeTitle}
+          description={freeDescription}
           actions={
             <Button type="primary" onClick={() => navigate('/license')}>
               管理授权
@@ -221,11 +242,19 @@ export default function Dashboard() {
             </Col>
           </Row>
 
-          {/* Platforms grid */}
+          {/* Platforms grid（平台清单来自服务端下发的 capabilities） */}
           <div style={{ marginBottom: 20 }}>
             <div className="fg-card-section-title">平台授权与登录状态</div>
+            {platformIds.length === 0 ? (
+              <Card>
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={capLoaded ? '暂无平台授权数据' : '正在从服务器同步授权规则…'}
+                />
+              </Card>
+            ) : (
             <Row gutter={[16, 16]}>
-              {(['xiaomi', 'tuya', 'midea', 'ewelink'] as const).map((id) => {
+              {platformIds.map((id) => {
                 const plat = authPlatforms.find((p) => p.platform_id === id)
                 const cap = capDetails[id]
                 const isLoggedIn = plat?.authenticated ?? false
@@ -234,7 +263,8 @@ export default function Dashboard() {
                   cap?.trialRemainingDays ?? 0,
                   cap?.enabled ?? true,
                 )
-                const color = PLATFORM_COLOR[id]
+                const color = PLATFORM_COLOR[id] ?? 'var(--fg-text-tertiary)'
+                const route = PLATFORM_ROUTE[id] ?? `/platform/${id}`
 
                 return (
                   <Col xs={24} sm={12} md={6} key={id}>
@@ -242,15 +272,15 @@ export default function Dashboard() {
                       className="fg-card fg-card-platform hoverable"
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(PLATFORM_ROUTE[id])}
+                      onClick={() => navigate(route)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') navigate(PLATFORM_ROUTE[id])
+                        if (e.key === 'Enter' || e.key === ' ') navigate(route)
                       }}
                       style={{ '--pc': color } as React.CSSProperties}
                     >
                       <div className="row">
-                        <span className="icon-wrap">{PLATFORM_ICON[id]}</span>
-                        <span className="name">{PLATFORM_LABELS[id]}</span>
+                        <span className="icon-wrap">{PLATFORM_ICON[id] ?? <CloudOutlined />}</span>
+                        <span className="name">{platformLabel(id)}</span>
                         <PlatformDot platform={id} size={8} />
                       </div>
                       <div className="tags">
@@ -283,6 +313,7 @@ export default function Dashboard() {
                 )
               })}
             </Row>
+            )}
           </div>
 
           {/* Charts & recent events */}
