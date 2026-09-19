@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, screen, Tray, Menu, nativeImage } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -11,6 +11,10 @@ let oauthWindow: BrowserWindow | null = null
 let wechatOAuthWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
+// macOS 26 (Tahoe) 起, 菜单栏图标改由 ControlCenter/StatusKit 统一排布, 新建的
+// 状态项可能被排到屏幕外 (实测 y=-17) → 图标"已创建但看不见". 重建状态项是已知的
+// 恢复手段, 这里限制重建次数, 避免无谓循环 (见 recoverTrayIfHidden).
+const TRAY_MAX_REBUILD = 2
 let serverUrl = 'http://localhost:38090'
 let serverProcess: ChildProcess | null = null
 let serverStarting = false
@@ -478,6 +482,79 @@ function createTray() {
   tray.on('double-click', () => showMainWindow())
 }
 
+/**
+ * macOS 26.5 (Tahoe) 会把第三方状态项排到屏幕外 (实测 frame y=-17, 或宽高为 0),
+ * 图标就"存在但看不见". 应用侧无法直接把状态项挪回可见位置 (系统限制), 但重建
+ * 状态项常能换回一次可用排布 —— 这是上游多个项目采用的恢复手段
+ * (oMLX #1497, CodexBar #998, 同为 Tahoe 26.5).
+ */
+/**
+ * 判断状态项是否落在"看不见"的位置, 没问题时返回 null.
+ * 已知两种坏位置:
+ *  ① 被排到屏幕外 (y<0) 或没有尺寸 —— 上游 oMLX #1497 在 Tahoe 26.5 的现象;
+ *  ② 被排到菜单栏正中 —— 带刘海的 MacBook 上正中就是刘海, 系统不会在刘海下绘制
+ *     任何东西, 图标因此看不见 (本机实测状态项 x=729..767, 刘海区间 x=646..825).
+ */
+function describeTrayProblem(
+  bounds: { x: number; y: number; width: number; height: number }
+): string | null {
+  if (bounds.y < 0) return `状态项被排到屏幕外 (y=${bounds.y})`
+  if (bounds.width <= 0 || bounds.height <= 0) {
+    return `状态项没有尺寸 (${bounds.width}x${bounds.height})`
+  }
+
+  // 正常状态项贴在菜单栏右侧; 落在屏幕正中即异常 (刘海机型正中恰是刘海)
+  const screenWidth = screen.getPrimaryDisplay().bounds.width
+  const center = bounds.x + bounds.width / 2
+  if (Math.abs(center - screenWidth / 2) < screenWidth * 0.1) {
+    return (
+      `状态项落在菜单栏正中 (x=${bounds.x}..${bounds.x + bounds.width}, 屏幕正中=${screenWidth / 2})` +
+      ' —— 刘海机型上正中被刘海遮住, 等于看不见'
+    )
+  }
+
+  return null
+}
+
+function recoverTrayIfHidden(attempt = 1): void {
+  if (process.platform !== 'darwin') return
+
+  const current = tray
+  if (!current || current.isDestroyed()) return
+
+  let bounds: { x: number; y: number; width: number; height: number }
+  try {
+    bounds = current.getBounds()
+  } catch (err) {
+    console.warn('[Tray] 读取状态项位置失败:', err)
+    return
+  }
+
+  console.log(`[Tray] 状态项位置: x=${bounds.x} y=${bounds.y} ${bounds.width}x${bounds.height}`)
+
+  const problem = describeTrayProblem(bounds)
+  if (!problem) {
+    if (attempt > 1) console.log('[Tray] 状态项已回到可见位置')
+    return
+  }
+
+  if (attempt > TRAY_MAX_REBUILD) {
+    console.warn(
+      `[Tray] ${problem} —— 重建 ${TRAY_MAX_REBUILD} 次仍未落回可见位置. ` +
+      '这是 macOS 26.5 (Tahoe) 的系统排布问题, 非本应用缺陷. ' +
+      '托盘图标可能暂时不可见, 可从 Dock 图标打开主窗口.'
+    )
+    return
+  }
+
+  console.warn(`[Tray] ${problem}, 重建状态项 (第 ${attempt}/${TRAY_MAX_REBUILD} 次)`)
+  current.destroy()
+  tray = null
+  createTray()
+  updateTrayMenu()
+  setTimeout(() => recoverTrayIfHidden(attempt + 1), 2000)
+}
+
 function updateTrayMenu() {
   if (!tray) return
   const contextMenu = Menu.buildFromTemplate([
@@ -818,6 +895,14 @@ app.whenReady().then(async () => {
       app.dock?.show()
     }
   })
+
+  // 等菜单栏排布稳定后复核状态项是否真的落在可见位置 (macOS 26.5 会排到屏幕外)
+  setTimeout(() => recoverTrayIfHidden(), 2500)
+
+  // 显示器变化 / 分辨率切换后系统会重排菜单栏, 同样需要复核
+  screen.on('display-metrics-changed', () => setTimeout(() => recoverTrayIfHidden(), 1500))
+  screen.on('display-added', () => setTimeout(() => recoverTrayIfHidden(), 1500))
+  screen.on('display-removed', () => setTimeout(() => recoverTrayIfHidden(), 1500))
 })
 
 app.on('window-all-closed', () => {
