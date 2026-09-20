@@ -4,7 +4,7 @@
 [![Electron](https://img.shields.io/badge/Electron-33-blueviolet.svg)](https://www.electronjs.org/)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 
-The cross-platform desktop client for **FeyaGate** — a smart-home MCP gateway that lets AI agents (Claude Code, Cursor, Cline, etc.) control your Xiaomi / Tuya / Midea / eWeLink devices through a local MCP server.
+The cross-platform desktop client for **FeyaGate** — a smart-home MCP gateway that lets AI agents (Claude Code, Cursor, Cline, etc.) control your Xiaomi / Tuya / Midea / eWeLink / 华为智慧生活 (Huawei) devices through a local MCP server.
 
 This repository contains only the **Electron + React** desktop shell. The MCP server itself is a separate C++ binary that this app downloads and supervises automatically.
 
@@ -12,7 +12,7 @@ This repository contains only the **Electron + React** desktop shell. The MCP se
 
 ## ✨ Features
 
-- 🎛 **Unified dashboard** for Xiaomi, Tuya, Midea and eWeLink devices
+- 🎛 **Unified dashboard** for Xiaomi, Tuya, Midea, eWeLink and 华为智慧生活 (Huawei) devices
 - 🔐 **One-click OAuth** for each platform (QR / browser flows)
 - 📷 **Live camera streams** with snapshot, vision-AI tagging and motion-trigger rules
 - 🤖 **MCP server lifecycle** — auto-launch, port discovery, health checks, log viewer
