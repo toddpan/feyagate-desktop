@@ -306,7 +306,7 @@ export default function Schedules() {
               placeholder="选择执行时间" />
           </Form.Item>
           <Form.Item name="tool_name" label="MCP 工具名" rules={[{ required: true, message: '请输入工具名' }]}>
-            <Input placeholder="如: set_xiaomi_device_property" />
+            <Input placeholder="如: xiaomi/set_property" />
           </Form.Item>
           <Form.Item name="tool_args" label="工具参数 (JSON)" rules={[{ required: true, message: '请输入参数' }]}>
             <Input.TextArea

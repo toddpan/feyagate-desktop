@@ -328,22 +328,22 @@ export async function xiaomiSendCtrlRpc(deviceId: string, iid: string, value?: u
   const parts = iid.split('.')
   const siid = parts.length >= 3 ? parts[2] : '0'
   const piid = parts.length >= 4 ? parts[3] : '0'
-  return callTool('set_xiaomi_device_property', { deviceId, siid: Number(siid), piid: Number(piid), value })
+  return callTool('xiaomi/set_property', { device_id: deviceId, siid, piid, value })
 }
 
 export async function xiaomiSendGetRpc(deviceId: string, iid: string): Promise<Record<string, unknown>> {
   const parts = iid.split('.')
   const siid = parts.length >= 3 ? parts[2] : '0'
   const piid = parts.length >= 4 ? parts[3] : '0'
-  return callTool('get_xiaomi_device_properties', { deviceId, siid: Number(siid), piids: [Number(piid)] })
+  return callTool('xiaomi/get_properties', { device_id: deviceId, siid, piids: [piid] })
 }
 
 export async function xiaomiSceneList(): Promise<Record<string, unknown>> {
-  return callTool('xiaomi/scene_list')
+  return callTool('scene/list', { platform: 'xiaomi' })
 }
 
 export async function xiaomiSceneTrigger(sceneId: string): Promise<Record<string, unknown>> {
-  return callTool('xiaomi/scene_trigger', { sceneId })
+  return callTool('scene/trigger', { platform: 'xiaomi', scene_id: sceneId })
 }
 
 export interface XiaozhiClientInfo {
@@ -924,7 +924,7 @@ export async function refreshTuyaDevices(): Promise<{ success: boolean; device_c
 }
 
 export async function tuyaControl(deviceId: string, dpCode: string, value: unknown): Promise<{ success: boolean; message: string }> {
-  return callTool<{ success: boolean; message: string }>('set_tuya_device_property', { deviceId, code: dpCode, value })
+  return callTool<{ success: boolean; message: string }>('tuya/set_property', { device_id: deviceId, code: dpCode, value })
 }
 
 export async function getAllDevices(): Promise<{ total: number; devices: Array<TuyaDevice & { platform: string }> }> {
@@ -959,7 +959,7 @@ export async function refreshMideaDevices(): Promise<{ success: boolean; device_
 }
 
 export async function getMideaDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('get_midea_device_properties', { deviceId })
+  return callTool('midea/get_properties', { device_id: deviceId })
 }
 
 export async function getMideaDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
@@ -967,7 +967,7 @@ export async function getMideaDeviceSpecs(deviceId: string): Promise<Record<stri
 }
 
 export async function mideaControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
-  return callTool('set_midea_device_property', { deviceId, property, value })
+  return callTool('midea/set_property', { device_id: deviceId, property, value })
 }
 
 // ─── eWeLink (易微联) APIs ─────────────────────────────────────────
@@ -1000,7 +1000,7 @@ export async function refreshEwelinkDevices(): Promise<{ success: boolean; devic
 }
 
 export async function getEwelinkDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('get_ewelink_device_properties', { deviceId })
+  return callTool('ewelink/get_properties', { device_id: deviceId })
 }
 
 export async function getEwelinkDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
@@ -1008,7 +1008,7 @@ export async function getEwelinkDeviceSpecs(deviceId: string): Promise<Record<st
 }
 
 export async function ewelinkControl(deviceId: string, property: string, value: unknown): Promise<{ success: boolean; message: string }> {
-  return callTool('set_ewelink_device_property', { deviceId, property, value })
+  return callTool('ewelink/set_property', { device_id: deviceId, property, value })
 }
 
 // ─── Huawei (华为智慧生活) APIs ───────────────────────────────────────
@@ -1063,7 +1063,7 @@ export async function refreshHuaweiDevices(): Promise<{ success: boolean; device
 }
 
 export async function getHuaweiDeviceStatus(deviceId: string): Promise<Record<string, unknown>> {
-  return callTool('get_huawei_device_properties', { deviceId })
+  return callTool('huawei/get_properties', { device_id: deviceId })
 }
 
 export async function getHuaweiDeviceSpecs(deviceId: string): Promise<Record<string, unknown>> {
@@ -1076,9 +1076,9 @@ export async function huaweiControl(
   value: unknown,
   serviceId?: string
 ): Promise<{ success: boolean; message: string }> {
-  const args: Record<string, unknown> = { deviceId, property, value }
-  if (serviceId) args.serviceId = serviceId
-  return callTool('set_huawei_device_property', args)
+  const args: Record<string, unknown> = { device_id: deviceId, property, value }
+  if (serviceId) args.sid = serviceId
+  return callTool('huawei/set_property', args)
 }
 
 // ─── Schedule (定时任务) APIs ─────────────────────────────────────────

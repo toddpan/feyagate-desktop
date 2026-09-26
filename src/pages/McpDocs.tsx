@@ -319,7 +319,7 @@ const tools: ToolDoc[] = [
     },
   },
   {
-    name: 'set_xiaomi_device_property',
+    name: 'xiaomi/set_property',
     description: '设置小米设备属性值。通过 siid/piid 指定属性。',
     icon: <ThunderboltOutlined />,
     category: 'xiaomi',
@@ -330,12 +330,12 @@ const tools: ToolDoc[] = [
       { name: 'value', type: 'any', required: true, desc: '属性值' },
     ],
     example: {
-      request: JSON.stringify({ jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'set_xiaomi_device_property', arguments: { deviceId: '534345813', siid: 2, piid: 1, value: true } } }, null, 2),
+      request: JSON.stringify({ jsonrpc: '2.0', id: 15, method: 'tools/call', params: { name: 'xiaomi/set_property', arguments: { device_id: '534345813', siid: 2, piid: 1, value: true } } }, null, 2),
       response: JSON.stringify({ success: true, data: { code: 0, message: 'ok' } }, null, 2),
     },
   },
   {
-    name: 'get_xiaomi_device_properties',
+    name: 'xiaomi/get_properties',
     description: '获取小米设备指定属性值。',
     icon: <ThunderboltOutlined />,
     category: 'xiaomi',
@@ -345,7 +345,7 @@ const tools: ToolDoc[] = [
       { name: 'piids', type: 'number[]', required: true, desc: '属性实例 ID 数组，如 [1]' },
     ],
     example: {
-      request: JSON.stringify({ jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'get_xiaomi_device_properties', arguments: { deviceId: '534345813', siid: 2, piids: [1] } } }, null, 2),
+      request: JSON.stringify({ jsonrpc: '2.0', id: 16, method: 'tools/call', params: { name: 'xiaomi/get_properties', arguments: { device_id: '534345813', siid: 2, piids: [1] } } }, null, 2),
       response: JSON.stringify({ code: 0, result: [{ did: '534345813', siid: 2, piid: 1, value: true, code: 0 }] }, null, 2),
     },
   },
@@ -654,12 +654,12 @@ xiaomi/get_devices(area_id="客厅", device_class="light") → 获取 did
 device/specs(device_id="534345813") → 获取属性/动作定义
 
 # 5. 读取属性
-get_xiaomi_device_properties(device_id="534345813", siid=2, piids=[1]) → 开关状态
+xiaomi/get_properties(device_id="534345813", siid=2, piids=[1]) → 开关状态
 
 # 6. 控制设备
-set_xiaomi_device_property(device_id="534345813", siid=2, piid=1, value=true)  → 开灯
-set_xiaomi_device_property(device_id="534345813", siid=2, piid=2, value=70)    → 亮度70%
-execute_xiaomi_device_action(device_id="534345813", siid=2, aiid=1, params=[]) → Toggle`} language="bash" />
+xiaomi/set_property(device_id="534345813", siid=2, piid=1, value=true)  → 开灯
+xiaomi/set_property(device_id="534345813", siid=2, piid=2, value=70)    → 亮度70%
+xiaomi/execute_action(device_id="534345813", siid=2, aiid=1, params=[]) → Toggle`} language="bash" />
       </Card>
 
       <Card title="摄像头使用流程" size="small">
